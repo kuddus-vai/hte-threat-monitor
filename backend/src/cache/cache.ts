@@ -27,7 +27,9 @@ class UpstashBackend implements CacheBackend {
   }
 
   async getFeed(): Promise<ThreatFeed | null> {
-    const raw = await this.request<string>(`/get/${FEED_KEY}`);
+    // Upstash REST wraps values: {"result":"<json-string>"}
+    const data = await this.request<{ result?: string }>(`/get/${FEED_KEY}`);
+    const raw = data?.result;
     if (!raw) return null;
     try {
       return JSON.parse(raw) as ThreatFeed;
@@ -37,7 +39,14 @@ class UpstashBackend implements CacheBackend {
   }
 
   async setFeed(feed: ThreatFeed, ttlSeconds: number): Promise<void> {
-    await this.request(`/set/${FEED_KEY}`, JSON.stringify(feed));
+    // Upstash REST: body = the JSON string of the value (single-encoded)
+    const res = await fetch(`${config.upstashUrl}/set/${FEED_KEY}`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${config.upstashToken}`, "content-type": "application/json" },
+      body: JSON.stringify(feed),
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!res.ok) throw new Error(`Upstash set HTTP ${res.status}`);
     await this.request(`/expire/${FEED_KEY}/${ttlSeconds}`);
   }
 }
