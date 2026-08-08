@@ -56,6 +56,12 @@ export const RSS_SOURCES: RssSource[] = [
     url: "https://status.aws.amazon.com/rss/all.rss",
     category: "outage",
   },
+  {
+    id: "gcp-status",
+    name: "Google Cloud Status",
+    url: "https://status.cloud.google.com/feed.atom",
+    category: "outage",
+  },
 ];
 
 const parser = new XMLParser({
