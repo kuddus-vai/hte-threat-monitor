@@ -66,6 +66,16 @@ console.log("\n🧠 heuristicExtract");
 
   const r3 = heuristicExtract("Phishing campaign targets bank customers", "Fake login pages");
   assert(r3.category === "phishing", "phishing category", r3.category);
+
+  const r4 = heuristicExtract("LockBit ransomware hits hospitals", "Encryptors deployed, ransom demanded");
+  assert(r4.category === "ransomware", "LockBit → ransomware", r4.category);
+  assert(r4.actor === "LockBit", "LockBit actor detected", String(r4.actor));
+
+  const r5 = heuristicExtract("APT28 targets NATO officials", "Spearphishing campaign attributed to Russian group");
+  assert(r5.actor === "APT28", "APT28 actor detected", String(r5.actor));
+
+  const r6 = heuristicExtract("New vulnerability in routers", "CVE-2026-9999 disclosed, patch available");
+  assert(r6.actor === undefined, "no actor when none named", String(r6.actor));
 }
 
 // ── normalizers (AI output → enum) ─────────────────────────

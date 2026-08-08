@@ -36,7 +36,10 @@ function renderFeed(): void {
       </div>
       <div class="t">${escapeHtml(e.title)}</div>
       <div class="s">${escapeHtml(e.summary.slice(0, 130))}</div>
-      ${e.country ? `<div class="loc">📍 ${e.country}</div>` : ""}
+      <div class="loc">
+        ${e.country ? `📍 ${e.country}` : ""}
+        ${e.actor ? `<span class="actor-badge">🎭 ${escapeHtml(e.actor)}</span>` : ""}
+      </div>
     `;
     li.addEventListener("click", () => window.open(e.url, "_blank"));
     list.appendChild(li);

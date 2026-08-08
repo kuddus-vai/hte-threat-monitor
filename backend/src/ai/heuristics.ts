@@ -43,10 +43,46 @@ export function normalizeSeverity(raw: string): ThreatSeverity {
   return "medium";
 }
 
+/** Known threat actors/gangs for heuristic (non-AI) detection. */
+const KNOWN_ACTORS: Array<{ name: string; re: RegExp }> = [
+  { name: "LockBit", re: /\blockbit\b/i },
+  { name: "BlackCat/ALPHV", re: /\b(blackcat|alphv)\b/i },
+  { name: "Cl0p", re: /\bcl0p\b|\bclop\b/i },
+  { name: "REvil", re: /\brevil\b|\bsodinokibi\b/i },
+  { name: "Conti", re: /\bconti\b/i },
+  { name: "Hive", re: /\bhive ransomware\b|\b hive\b.*\bransom/i },
+  { name: "Lazarus", re: /\blazarus\b/i },
+  { name: "APT28", re: /\bapt[- ]?28\b|\bfancy bear\b/i },
+  { name: "APT29", re: /\bapt[- ]?29\b|\bcozy bear\b/i },
+  { name: "APT41", re: /\bapt[- ]?41\b/i },
+  { name: "Scattered Spider", re: /\bscattered spider\b/i },
+  { name: "Black Basta", re: /\bblack ?basta\b/i },
+  { name: "Akira", re: /\bakira\b/i },
+  { name: "KillNet", re: /\bkillnet\b/i },
+  { name: "Anonymous Sudan", re: /\banonymous sudan\b/i },
+  { name: "Volt Typhoon", re: /\bvolt typhoon\b/i },
+  { name: "Sandworm", re: /\bsandworm\b/i },
+  { name: "FIN7", re: /\bfin[- ]?7\b/i },
+  { name: "UNC5325", re: /\bunc[- ]?5325\b/i },
+  { name: "Medusa", re: /\bmedusa\b/i },
+  { name: "Rhysida", re: /\brhysida\b/i },
+  { name: "LockBit 3.0", re: /\blockbit ?3/i },
+];
+
+function detectActor(title: string, desc: string): string | undefined {
+  const blob = `${title}. ${desc}`;
+  for (const a of KNOWN_ACTORS) {
+    if (a.re.test(blob)) return a.name;
+  }
+  // generic pattern: "XxxXxx gang/group" — skip, too noisy; rely on known list
+  return undefined;
+}
+
 export function heuristicExtract(title: string, desc: string): {
   category: ThreatCategory;
   severity: ThreatSeverity;
   location?: string;
+  actor?: string;
   summary: string;
 } {
   const blob = `${title}. ${desc}`;
@@ -69,6 +105,7 @@ export function heuristicExtract(title: string, desc: string): {
     category,
     severity,
     location: loc.country,
+    actor: detectActor(title, desc),
     summary: (desc || title).slice(0, 160),
   };
 }

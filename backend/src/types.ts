@@ -28,6 +28,7 @@ export interface ThreatEvent {
   city?: string;
   lat?: number;
   lon?: number;
+  actor?: string; // threat actor / group / vendor if identifiable
   aiProcessed: boolean; // true when Ollama extracted the fields
 }
 

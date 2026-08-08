@@ -18,12 +18,13 @@ import {
 const SYSTEM_PROMPT = `You are a threat-intelligence triage engine. Analyze the given cybersecurity news item and respond with ONLY a compact JSON object — no markdown, no code fences, no commentary.
 
 Schema:
-{"category":"malware|ransomware|phishing|data_breach|vulnerability|outage|apt|other","severity":"low|medium|high|critical","location":"<country or city name, or empty string if unknown>","summary":"<1-2 sentence plain-language summary, max 140 chars>"}
+{"category":"malware|ransomware|phishing|data_breach|vulnerability|outage|apt|other","severity":"low|medium|high|critical","location":"<country or city name, or empty string if unknown>","actor":"<threat actor/group/vendor name if identifiable, else empty string>","summary":"<1-2 sentence plain-language summary, max 140 chars>"}
 
 Rules:
 - severity: critical = active mass exploitation / nation-state / major outage; high = serious but limited; medium = notable; low = minor.
 - category: prefer the most specific match (ransomware beats malware; data_breach for leaks).
 - location: the country/region the event affects OR originates from; empty if not determinable.
+- actor: the named threat group (e.g. LockBit, APT28, Lazarus), malware family, or affected vendor; empty if none named.
 - summary: plain language, no markdown, for a non-technical executive.`;
 
 function parseLooseJson(text: string): any {
@@ -72,12 +73,14 @@ export async function aiExtractEvent(
     const location = String(parsed.location ?? "");
     const geo = resolveLocation(location);
     const summary = String(parsed.summary ?? "").slice(0, 200);
+    const actor = String(parsed.actor ?? "").trim().slice(0, 60) || undefined;
 
     return {
       ...base,
       category,
       severity,
       summary: summary || fallback.summary,
+      actor,
       ...(geo.country ? geo : {}),
       aiProcessed: true,
     };
