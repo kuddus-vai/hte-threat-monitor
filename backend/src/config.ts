@@ -7,6 +7,8 @@ import { resolve } from "node:path";
 
 function loadEnv(): Record<string, string> {
   const env: Record<string, string> = {};
+  // Edge runtimes (Cloudflare Workers) have no `process`/fs — skip file load.
+  if (typeof process === "undefined") return env;
   const candidates = [
     resolve(process.cwd(), ".env"),
     resolve(process.cwd(), "../.env"),

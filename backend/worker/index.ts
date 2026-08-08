@@ -12,7 +12,7 @@
  *     or leave AI_ENGINE=none for pure heuristic triage.
  *   - OTX_API_KEY optional secret.
  */
-import { handleThreats, handleRefresh, handleHealth, handleStats } from "./src/server.js";
+import { handleThreats, handleRefresh, handleHealth, handleStats } from "../src/server.js";
 
 export interface Env {
   CORS_ORIGIN?: string;
