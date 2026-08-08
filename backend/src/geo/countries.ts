@@ -80,7 +80,102 @@ const COUNTRIES: Country[] = [
 const byCode = new Map<string, Country>();
 for (const c of COUNTRIES) byCode.set(c.code, c);
 
-/** Find coordinates for a location string (country name, code, or city hint). */
+// Major cities — the AI frequently names a city instead of a country.
+interface City { name: string; country: string; lat: number; lon: number; }
+const CITIES: City[] = [
+  { name: "washington dc", country: "US", lat: 38.9072, lon: -77.0369 },
+  { name: "washington", country: "US", lat: 38.9072, lon: -77.0369 },
+  { name: "new york", country: "US", lat: 40.7128, lon: -74.006 },
+  { name: "san francisco", country: "US", lat: 37.7749, lon: -122.4194 },
+  { name: "los angeles", country: "US", lat: 34.0522, lon: -118.2437 },
+  { name: "chicago", country: "US", lat: 41.8781, lon: -87.6298 },
+  { name: "austin", country: "US", lat: 30.2672, lon: -97.7431 },
+  { name: "seattle", country: "US", lat: 47.6062, lon: -122.3321 },
+  { name: "london", country: "GB", lat: 51.5074, lon: -0.1278 },
+  { name: "manchester", country: "GB", lat: 53.4808, lon: -2.2426 },
+  { name: "paris", country: "FR", lat: 48.8566, lon: 2.3522 },
+  { name: "berlin", country: "DE", lat: 52.52, lon: 13.405 },
+  { name: "munich", country: "DE", lat: 48.1351, lon: 11.582 },
+  { name: "amsterdam", country: "NL", lat: 52.3676, lon: 4.9041 },
+  { name: "brussels", country: "BE", lat: 50.8503, lon: 4.3517 },
+  { name: "zurich", country: "CH", lat: 47.3769, lon: 8.5417 },
+  { name: "geneva", country: "CH", lat: 46.2044, lon: 6.1432 },
+  { name: "vienna", country: "AT", lat: 48.2082, lon: 16.3738 },
+  { name: "rome", country: "IT", lat: 41.9028, lon: 12.4964 },
+  { name: "milan", country: "IT", lat: 45.4642, lon: 9.19 },
+  { name: "madrid", country: "ES", lat: 40.4168, lon: -3.7038 },
+  { name: "barcelona", country: "ES", lat: 41.3874, lon: 2.1686 },
+  { name: "lisbon", country: "PT", lat: 38.7223, lon: -9.1393 },
+  { name: "stockholm", country: "SE", lat: 59.3293, lon: 18.0686 },
+  { name: "oslo", country: "NO", lat: 59.9139, lon: 10.7522 },
+  { name: "copenhagen", country: "DK", lat: 55.6761, lon: 12.5683 },
+  { name: "helsinki", country: "FI", lat: 60.1699, lon: 24.9384 },
+  { name: "warsaw", country: "PL", lat: 52.2297, lon: 21.0122 },
+  { name: "kyiv", country: "UA", lat: 50.4501, lon: 30.5234 },
+  { name: "kiev", country: "UA", lat: 50.4501, lon: 30.5234 },
+  { name: "moscow", country: "RU", lat: 55.7558, lon: 37.6173 },
+  { name: "st petersburg", country: "RU", lat: 59.9311, lon: 30.3609 },
+  { name: "minsk", country: "BY", lat: 53.9006, lon: 27.559 },
+  { name: "bucharest", country: "RO", lat: 44.4268, lon: 26.1025 },
+  { name: "prague", country: "CZ", lat: 50.0755, lon: 14.4378 },
+  { name: "athens", country: "GR", lat: 37.9838, lon: 23.7275 },
+  { name: "istanbul", country: "TR", lat: 41.0082, lon: 28.9784 },
+  { name: "ankara", country: "TR", lat: 39.9334, lon: 32.8597 },
+  { name: "tel aviv", country: "IL", lat: 32.0853, lon: 34.7818 },
+  { name: "jerusalem", country: "IL", lat: 31.7683, lon: 35.2137 },
+  { name: "riyadh", country: "SA", lat: 24.7136, lon: 46.6753 },
+  { name: "dubai", country: "AE", lat: 25.2048, lon: 55.2708 },
+  { name: "tehran", country: "IR", lat: 35.6892, lon: 51.389 },
+  { name: "baghdad", country: "IQ", lat: 33.3152, lon: 44.3661 },
+  { name: "new delhi", country: "IN", lat: 28.6139, lon: 77.209 },
+  { name: "delhi", country: "IN", lat: 28.6139, lon: 77.209 },
+  { name: "mumbai", country: "IN", lat: 19.076, lon: 72.8777 },
+  { name: "bengaluru", country: "IN", lat: 12.9716, lon: 77.5946 },
+  { name: "bangalore", country: "IN", lat: 12.9716, lon: 77.5946 },
+  { name: "hyderabad", country: "IN", lat: 17.385, lon: 78.4867 },
+  { name: "kolkata", country: "IN", lat: 22.5726, lon: 88.3639 },
+  { name: "chennai", country: "IN", lat: 13.0827, lon: 80.2707 },
+  { name: "islamabad", country: "PK", lat: 33.6844, lon: 73.0479 },
+  { name: "karachi", country: "PK", lat: 24.8607, lon: 67.0011 },
+  { name: "dhaka", country: "BD", lat: 23.8103, lon: 90.4125 },
+  { name: "beijing", country: "CN", lat: 39.9042, lon: 116.4074 },
+  { name: "shanghai", country: "CN", lat: 31.2304, lon: 121.4737 },
+  { name: "shenzhen", country: "CN", lat: 22.5431, lon: 114.0579 },
+  { name: "hong kong", country: "HK", lat: 22.3193, lon: 114.1694 },
+  { name: "tokyo", country: "JP", lat: 35.6762, lon: 139.6503 },
+  { name: "osaka", country: "JP", lat: 34.6937, lon: 135.5023 },
+  { name: "seoul", country: "KR", lat: 37.5665, lon: 126.978 },
+  { name: "pyongyang", country: "KP", lat: 39.0392, lon: 125.7625 },
+  { name: "taipei", country: "TW", lat: 25.033, lon: 121.5654 },
+  { name: "singapore", country: "SG", lat: 1.3521, lon: 103.8198 },
+  { name: "kuala lumpur", country: "MY", lat: 3.139, lon: 101.6869 },
+  { name: "jakarta", country: "ID", lat: -6.2088, lon: 106.8456 },
+  { name: "hanoi", country: "VN", lat: 21.0278, lon: 105.8342 },
+  { name: "ho chi minh city", country: "VN", lat: 10.8231, lon: 106.6297 },
+  { name: "bangkok", country: "TH", lat: 13.7563, lon: 100.5018 },
+  { name: "manila", country: "PH", lat: 14.5995, lon: 120.9842 },
+  { name: "sydney", country: "AU", lat: -33.8688, lon: 151.2093 },
+  { name: "melbourne", country: "AU", lat: -37.8136, lon: 144.9631 },
+  { name: "canberra", country: "AU", lat: -35.2809, lon: 149.13 },
+  { name: "auckland", country: "NZ", lat: -36.8509, lon: 174.7645 },
+  { name: "lagos", country: "NG", lat: 6.5244, lon: 3.3792 },
+  { name: "abuja", country: "NG", lat: 9.0765, lon: 7.3986 },
+  { name: "johannesburg", country: "ZA", lat: -26.2041, lon: 28.0473 },
+  { name: "cape town", country: "ZA", lat: -33.9249, lon: 18.4241 },
+  { name: "cairo", country: "EG", lat: 30.0444, lon: 31.2357 },
+  { name: "nairobi", country: "KE", lat: -1.2921, lon: 36.8219 },
+  { name: "casablanca", country: "MA", lat: 33.5731, lon: -7.5898 },
+  { name: "sao paulo", country: "BR", lat: -23.5505, lon: -46.6333 },
+  { name: "rio de janeiro", country: "BR", lat: -22.9068, lon: -43.1729 },
+  { name: "buenos aires", country: "AR", lat: -34.6037, lon: -58.3816 },
+  { name: "bogota", country: "CO", lat: 4.711, lon: -74.0721 },
+  { name: "mexico city", country: "MX", lat: 19.4326, lon: -99.1332 },
+  { name: "toronto", country: "CA", lat: 43.6532, lon: -79.3832 },
+  { name: "ottawa", country: "CA", lat: 45.4215, lon: -75.6972 },
+  { name: "vancouver", country: "CA", lat: 49.2827, lon: -123.1207 },
+];
+
+/** Find coordinates for a location string (city, country name, code). */
 export function resolveLocation(text: string): { country?: string; lat?: number; lon?: number } {
   if (!text) return {};
 
@@ -92,6 +187,13 @@ export function resolveLocation(text: string): { country?: string; lat?: number;
   for (const part of [text, ...parts]) {
     const t = part.toLowerCase();
     if (!t) continue;
+
+    // city match first (more specific)
+    for (const c of CITIES) {
+      if (t === c.name || t.includes(c.name)) {
+        return { country: c.country, lat: c.lat, lon: c.lon };
+      }
+    }
 
     // exact alpha-2 code
     if (/^[a-z]{2}$/.test(t)) {

@@ -1,0 +1,17 @@
+[Unit]
+Description=HTE Cyber Threat Monitor (backend + frontend)
+After=network-online.target ollama.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kuddus
+WorkingDirectory=/home/kuddus/projects/hte-threat-monitor
+# Backend :8787 (ingests on boot, refreshes every 15 min)
+ExecStart=/home/kuddus/projects/hte-threat-monitor/node_modules/.bin/tsx backend/src/index.ts
+Restart=on-failure
+RestartSec=10
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=default.target

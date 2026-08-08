@@ -8,7 +8,9 @@ const $ = <T extends HTMLElement>(sel: string): T => document.querySelector(sel)
 let feed: ThreatFeed = { updatedAt: "", sourceCount: 0, total: 0, events: [] };
 let activeSev = "all";
 
-initGlobe($("#globe"));
+initGlobe($("#globe")).catch((err) => {
+  console.error("globe init failed:", err);
+});
 
 // ── sidebar feed ─────────────────────────────────────────
 function renderFeed(): void {

@@ -1,4 +1,4 @@
-import Globe, { type GlobeInstance } from "globe.gl";
+import type { GlobeInstance } from "globe.gl";
 import { feature } from "topojson-client";
 import worldAtlas from "world-atlas/countries-110m.json";
 import type { ThreatEvent } from "../../backend/src/types";
@@ -6,7 +6,9 @@ import { SEV_COLORS, SEV_RANK } from "./api";
 
 let globe: GlobeInstance | null = null;
 
-export function initGlobe(el: HTMLElement): GlobeInstance {
+export async function initGlobe(el: HTMLElement): Promise<GlobeInstance> {
+  // dynamic import keeps the ~2MB three.js bundle out of the initial chunk
+  const { default: Globe } = await import("globe.gl");
   const topology = worldAtlas as unknown as { objects: { countries: never } };
   const countries = feature(topology, topology.objects.countries);
 
