@@ -210,15 +210,23 @@ export function resolveLocation(text: string): { country?: string; lat?: number;
   return {};
 }
 
-/** Best-effort: scan free text for any known country mention. */
+/** Best-effort: scan free text for any known country or city mention. */
 export function findCountryInText(text: string): { country?: string; lat?: number; lon?: number } {
   const t = (text || "").toLowerCase();
-  let best: Country | undefined;
+  let best: { country: string; lat: number; lon: number; len: number } | undefined;
+
   for (const c of COUNTRIES) {
-    if (t.includes(c.name) && (c.name.length > (best?.name.length || 0))) {
-      best = c;
+    if (t.includes(c.name) && (c.name.length > (best?.len || 0))) {
+      best = { country: c.code, lat: c.lat, lon: c.lon, len: c.name.length };
     }
   }
+  // cities are more specific than countries — prefer the longest mention
+  for (const c of CITIES) {
+    if (t.includes(c.name) && (c.name.length > (best?.len || 0))) {
+      best = { country: c.country, lat: c.lat, lon: c.lon, len: c.name.length };
+    }
+  }
+
   if (!best) return {};
-  return { country: best.code, lat: best.lat, lon: best.lon };
+  return { country: best.country, lat: best.lat, lon: best.lon };
 }
