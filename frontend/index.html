@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HTE Cyber Threat &amp; Tech Monitor</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="globe"></div>
+
+      <header id="topbar">
+        <div class="brand">
+          <span class="logo">🛰️</span>
+          <div>
+            <h1>HTE <span>THREAT MONITOR</span></h1>
+            <p class="sub">Real-time global cyber threat &amp; tech intelligence</p>
+          </div>
+        </div>
+        <div class="status">
+          <span id="status-dot" class="dot"></span>
+          <span id="status-text">connecting…</span>
+          <span class="sep">·</span>
+          <span id="updated-at">—</span>
+        </div>
+      </header>
+
+      <aside id="sidebar">
+        <div class="panel-head">
+          <h2>INTEL FEED</h2>
+          <span id="feed-count" class="badge">0</span>
+        </div>
+
+        <div class="filters" id="filters">
+          <button class="fbtn active" data-sev="all">ALL</button>
+          <button class="fbtn crit" data-sev="critical">CRIT</button>
+          <button class="fbtn high" data-sev="high">HIGH</button>
+          <button class="fbtn med" data-sev="medium">MED</button>
+          <button class="fbtn low" data-sev="low">LOW</button>
+        </div>
+
+        <div class="stats" id="stats">
+          <div class="stat"><b id="st-crit">0</b><span>CRITICAL</span></div>
+          <div class="stat"><b id="st-high">0</b><span>HIGH</span></div>
+          <div class="stat"><b id="st-med">0</b><span>MEDIUM</span></div>
+          <div class="stat"><b id="st-low">0</b><span>LOW</span></div>
+        </div>
+
+        <ul id="feed-list" class="feed-list"></ul>
+      </aside>
+
+      <footer id="ticker">
+        <div class="ticker-label">LIVE</div>
+        <div class="ticker-track" id="ticker-track"></div>
+      </footer>
+
+      <div id="legend">
+        <span class="lg crit">● Critical</span>
+        <span class="lg high">● High</span>
+        <span class="lg med">● Medium</span>
+        <span class="lg low">● Low</span>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
