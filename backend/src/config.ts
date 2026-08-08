@@ -7,8 +7,12 @@ import { resolve } from "node:path";
 
 function loadEnv(): Record<string, string> {
   const env: Record<string, string> = {};
-  // Edge runtimes (Cloudflare Workers) have no `process`/fs — skip file load.
+  // Edge runtimes (Cloudflare Workers) have no real `process`/fs — they get a
+  // shim from worker/index.ts (which sets __HTE_EDGE__ + process.env bindings).
   if (typeof process === "undefined") return env;
+  if ((globalThis as any).__HTE_EDGE__) {
+    return { ...(process.env as Record<string, string>) };
+  }
   const candidates = [
     resolve(process.cwd(), ".env"),
     resolve(process.cwd(), "../.env"),
