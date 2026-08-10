@@ -118,6 +118,21 @@ async function checkHealth(): Promise<void> {
 }
 
 bindFilters();
+
+// ── services modal (mother site) ───────────────
+function bindServicesModal(): void {
+  const modal = $("#services-modal");
+  const open = () => modal.classList.remove("hidden");
+  const close = () => modal.classList.add("hidden");
+  $("#services-btn").addEventListener("click", open);
+  $("#modal-close").addEventListener("click", close);
+  $("#modal-backdrop").addEventListener("click", close);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
+  });
+}
+bindServicesModal();
+
 void refresh();
 void checkHealth();
 setInterval(() => void refresh(), 60_000);
