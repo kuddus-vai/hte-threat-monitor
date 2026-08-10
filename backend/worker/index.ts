@@ -83,11 +83,17 @@ export default {
         return handlers.handleHealth(request, ctx);
       case "/api/stats":
         return handlers.handleStats(request, ctx);
-      default:
-        return new Response(JSON.stringify({ error: "not found" }), {
-          status: 404,
-          headers: { "content-type": "application/json", "access-control-allow-origin": corsOrigin },
-        });
     }
+
+    // Static dashboard assets (frontend/dist) served from the same origin.
+    // ASSETS binding is injected by wrangler via the `assets` config.
+    const assets = (e as unknown as { ASSETS?: { fetch: (req: Request) => Promise<Response> } }).ASSETS;
+    if (assets) {
+      return assets.fetch(request);
+    }
+    return new Response(JSON.stringify({ error: "not found" }), {
+      status: 404,
+      headers: { "content-type": "application/json", "access-control-allow-origin": corsOrigin },
+    });
   },
 };

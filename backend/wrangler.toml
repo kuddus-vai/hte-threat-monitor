@@ -3,3 +3,6 @@ main = "worker/index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
+
+# Serve the built dashboard from the same Worker (zero-cost static hosting)
+assets = { directory = "../frontend/dist", binding = "ASSETS" }
