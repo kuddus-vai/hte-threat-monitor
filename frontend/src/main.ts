@@ -1,5 +1,5 @@
 import "./style.css";
-import type { ThreatEvent, ThreatFeed } from "../../backend/src/types";
+import type { ThreatEvent, ThreatFeed, TrendPoint } from "../../backend/src/types";
 import { initGlobe, updateGlobe } from "./globe";
 import { SEV_COLORS, fetchFeed, fetchHealth, fmtDate, fmtTime } from "./api";
 
@@ -7,19 +7,37 @@ const $ = <T extends HTMLElement>(sel: string): T => document.querySelector(sel)
 
 let feed: ThreatFeed = { updatedAt: "", sourceCount: 0, total: 0, events: [] };
 let activeSev = "all";
+let activeCat = "all";
+let activeCountry = "";
+let searchQuery = "";
 
 initGlobe($("#globe")).catch((err) => {
   console.error("globe init failed:", err);
 });
 
+// ── unified filter pipeline ──────────────────────────────
+function filteredEvents(): ThreatEvent[] {
+  return feed.events.filter((e) => {
+    if (activeSev !== "all" && e.severity !== activeSev) return false;
+    if (activeCat !== "all" && e.category !== activeCat) return false;
+    if (activeCountry && e.country !== activeCountry) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const hay = `${e.title} ${e.summary} ${e.actor ?? ""} ${e.source} ${e.country ?? ""}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
 // ── sidebar feed ─────────────────────────────────────────
 function renderFeed(): void {
-  const events = activeSev === "all" ? feed.events : feed.events.filter((e) => e.severity === activeSev);
+  const events = filteredEvents();
   const list = $("#feed-list");
   list.innerHTML = "";
 
   if (events.length === 0) {
-    list.innerHTML = '<li class="empty">No events for this filter yet…</li>';
+    list.innerHTML = '<li class="empty">No events match the current filters…</li>';
     return;
   }
 
@@ -37,11 +55,18 @@ function renderFeed(): void {
       <div class="t">${escapeHtml(e.title)}</div>
       <div class="s">${escapeHtml(e.summary.slice(0, 130))}</div>
       <div class="loc">
-        ${e.country ? `📍 ${e.country}` : ""}
+        ${e.country ? `<span class="loc-chip" data-country="${e.country}">📍 ${e.country}</span>` : ""}
         ${e.actor ? `<span class="actor-badge">🎭 ${escapeHtml(e.actor)}</span>` : ""}
       </div>
     `;
-    li.addEventListener("click", () => window.open(e.url, "_blank"));
+    li.addEventListener("click", (ev) => {
+      const chip = (ev.target as HTMLElement).closest(".loc-chip") as HTMLElement | null;
+      if (chip) {
+        setCountry(chip.dataset.country ?? "");
+        return;
+      }
+      window.open(e.url, "_blank");
+    });
     list.appendChild(li);
   }
 }
@@ -53,7 +78,82 @@ function renderStats(): void {
   $("#st-high").textContent = String(by.high);
   $("#st-med").textContent = String(by.medium);
   $("#st-low").textContent = String(by.low);
-  $("#feed-count").textContent = String(feed.total);
+  $("#feed-count").textContent = String(filteredEvents().length);
+}
+
+// ── country chips ────────────────────────────────────────
+function renderCountryChips(): void {
+  const counts = new Map<string, number>();
+  for (const e of feed.events) {
+    if (e.country) counts.set(e.country, (counts.get(e.country) ?? 0) + 1);
+  }
+  const countries = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const box = $("#country-chips");
+  box.innerHTML = "";
+  for (const [cc, n] of countries) {
+    const chip = document.createElement("span");
+    chip.className = `chip${cc === activeCountry ? " active" : ""}`;
+    chip.textContent = `${cc} ${n}`;
+    chip.title = "Filter by country";
+    chip.addEventListener("click", () => setCountry(cc === activeCountry ? "" : cc));
+    box.appendChild(chip);
+  }
+}
+
+function setCountry(cc: string): void {
+  activeCountry = cc;
+  renderCountryChips();
+  const events = filteredEvents();
+  updateGlobe(events);
+  renderFeed();
+}
+
+// ── trend chart (SVG, zero-dep) ──────────────────────────
+async function loadTrends(): Promise<void> {
+  try {
+    const res = await fetch("/api/trends");
+    if (!res.ok) return;
+    const data = (await res.json()) as { points: TrendPoint[] };
+    const points = data.points.slice(0, 24).reverse(); // newest last → left-to-right
+    const box = $("#trend-chart");
+    const svg = $("#trend-svg");
+    if (points.length === 0) {
+      box.classList.add("hidden");
+      return;
+    }
+    box.classList.remove("hidden");
+    const W = 340;
+    const H = 90;
+    const PAD = 4;
+    const max = Math.max(1, ...points.map((p) => p.total));
+    const stepX = points.length > 1 ? (W - PAD * 2) / (points.length - 1) : 0;
+    const y = (v: number) => H - PAD - (v / max) * (H - PAD * 2);
+
+    const series: Array<[keyof TrendPoint, string]> = [
+      ["critical", "#f43f5e"],
+      ["high", "#f97316"],
+      ["medium", "#eab308"],
+      ["low", "#22c55e"],
+    ];
+    let grid = "";
+    for (let i = 0; i <= 3; i++) {
+      const gy = PAD + (i * (H - PAD * 2)) / 3;
+      grid += `<line class="grid-line" x1="${PAD}" y1="${gy}" x2="${W - PAD}" y2="${gy}"/>`;
+    }
+    let areas = "";
+    for (const [key, color] of series) {
+      const pts = points.map((p, i) => `${PAD + i * stepX},${y(Number(p[key]))}`).join(" ");
+      areas += `<polyline fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" points="${pts}"/>`;
+      // area fill under critical only (visual weight)
+      if (key === "critical") {
+        const fillPts = `${PAD},${H - PAD} ${pts} ${W - PAD},${H - PAD}`;
+        areas += `<polygon fill="${color}" fill-opacity="0.12" points="${fillPts}"/>`;
+      }
+    }
+    svg.innerHTML = grid + areas;
+  } catch {
+    /* keep chart hidden on failure */
+  }
 }
 
 // ── ticker ───────────────────────────────────────────────
@@ -76,7 +176,7 @@ function renderTicker(): void {
   track.innerHTML = html + html;
 }
 
-// ── filters ──────────────────────────────────────────────
+// ── filters & controls ───────────────────────────────────
 function bindFilters(): void {
   $("#filters").addEventListener("click", (ev) => {
     const btn = (ev.target as HTMLElement).closest(".fbtn") as HTMLButtonElement | null;
@@ -84,21 +184,61 @@ function bindFilters(): void {
     document.querySelectorAll(".fbtn").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
     activeSev = btn.dataset.sev ?? "all";
-    const events = activeSev === "all" ? feed.events : feed.events.filter((e) => e.severity === activeSev);
+    const events = filteredEvents();
     updateGlobe(events);
     renderFeed();
   });
+
+  $("#cat-filter").addEventListener("change", (ev) => {
+    activeCat = (ev.target as HTMLSelectElement).value;
+    const events = filteredEvents();
+    updateGlobe(events);
+    renderFeed();
+  });
+
+  $("#search-box").addEventListener("input", (ev) => {
+    searchQuery = (ev.target as HTMLInputElement).value.trim();
+    const events = filteredEvents();
+    updateGlobe(events);
+    renderFeed();
+  });
+
+  $("#export-btn").addEventListener("click", exportCsv);
+}
+
+function exportCsv(): void {
+  const rows = filteredEvents().map((e) =>
+    [
+      e.publishedAt,
+      e.severity,
+      e.category,
+      e.country ?? "",
+      e.actor ?? "",
+      `"${e.title.replace(/"/g, '""')}"`,
+      `"${e.summary.replace(/"/g, '""')}"`,
+      e.url,
+      e.source,
+    ].join(","),
+  );
+  const header = "publishedAt,severity,category,country,actor,title,summary,url,source";
+  const blob = new Blob([[header, ...rows].join("\n")], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `hte-threats-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 // ── data loop ────────────────────────────────────────────
 async function refresh(): Promise<void> {
   try {
     feed = await fetchFeed();
-    const events = activeSev === "all" ? feed.events : feed.events.filter((e) => e.severity === activeSev);
+    const events = filteredEvents();
     updateGlobe(events);
     renderFeed();
     renderStats();
     renderTicker();
+    renderCountryChips();
     $("#updated-at").textContent = `UPDATED ${fmtDate(feed.updatedAt)} · ${feed.sourceCount} SOURCES`;
   } catch (err) {
     $("#status-text").textContent = `feed error: ${String(err)}`;
@@ -135,7 +275,9 @@ bindServicesModal();
 
 void refresh();
 void checkHealth();
+void loadTrends();
 setInterval(() => void refresh(), 60_000);
+setInterval(() => void loadTrends(), 5 * 60_000);
 setInterval(() => void checkHealth(), 30_000);
 
 function escapeHtml(s: string): string {

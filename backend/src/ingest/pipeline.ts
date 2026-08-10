@@ -131,6 +131,22 @@ async function doRefresh(): Promise<RefreshResult> {
   };
   await cache.put(feed);
 
+  // 5) Hourly trend snapshot (dedupe: one point per hour bucket)
+  const hourBucket = new Date().toISOString().slice(0, 13) + ":00:00.000Z";
+  const existing = await cache.trends();
+  if (!existing.some((p) => p.ts === hourBucket)) {
+    const sev = { critical: 0, high: 0, medium: 0, low: 0 };
+    for (const e of capped) if (sev[e.severity] !== undefined) sev[e.severity]++;
+    await cache.pushTrend({
+      ts: hourBucket,
+      critical: sev.critical,
+      high: sev.high,
+      medium: sev.medium,
+      low: sev.low,
+      total: capped.length,
+    });
+  }
+
   return {
     ok: sourcesOk.length > 0,
     fetched: rawItems.length,

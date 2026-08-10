@@ -29,6 +29,7 @@ interface Handlers {
   handleRefresh: Handler;
   handleHealth: Handler;
   handleStats: Handler;
+  handleTrends: Handler;
 }
 
 let handlersPromise: Promise<Handlers> | null = null;
@@ -83,6 +84,8 @@ export default {
         return handlers.handleHealth(request, ctx);
       case "/api/stats":
         return handlers.handleStats(request, ctx);
+      case "/api/trends":
+        return handlers.handleTrends(request, ctx);
     }
 
     // Static dashboard assets (frontend/dist) served from the same origin.

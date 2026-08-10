@@ -84,6 +84,16 @@ export async function handleStats(_req: Request, env: Env): Promise<Response> {
   return json({ total: feed.total, bySeverity, byCategory, updatedAt: feed.updatedAt }, 200, env);
 }
 
+/** GET /api/trends — hourly severity series (newest first, capped 48). */
+export async function handleTrends(_req: Request, env: Env): Promise<Response> {
+  const points = await cache.trends();
+  return json(
+    { points, updatedAt: new Date().toISOString() },
+    200,
+    env,
+  );
+}
+
 function emptyFeed(): ThreatFeed {
   return { updatedAt: new Date().toISOString(), sourceCount: 0, total: 0, events: [] };
 }
@@ -98,6 +108,7 @@ export function createDevServer(): LocalRouter {
     [/^\/api\/refresh$/, "POST", handleRefresh],
     [/^\/api\/health$/, "GET", handleHealth],
     [/^\/api\/stats$/, "GET", handleStats],
+    [/^\/api\/trends$/, "GET", handleTrends],
   ];
 
   return {

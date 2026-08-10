@@ -41,6 +41,35 @@
           <button class="fbtn low" data-sev="low">LOW</button>
         </div>
 
+        <div class="search-row">
+          <input id="search-box" type="search" placeholder="🔍 Search intel…" autocomplete="off" />
+          <select id="cat-filter" class="cat-filter">
+            <option value="all">All types</option>
+            <option value="ransomware">Ransomware</option>
+            <option value="phishing">Phishing</option>
+            <option value="data_breach">Data breach</option>
+            <option value="vulnerability">Vulnerability</option>
+            <option value="malware">Malware</option>
+            <option value="apt">APT</option>
+            <option value="outage">Outage</option>
+            <option value="other">Other</option>
+          </select>
+          <button id="export-btn" class="export-btn" title="Download CSV">⬇ CSV</button>
+        </div>
+
+        <div id="trend-chart" class="trend-chart hidden">
+          <div class="trend-head">HOURLY THREAT TREND <span class="trend-sub">last 24h</span></div>
+          <svg id="trend-svg" viewBox="0 0 340 90" preserveAspectRatio="none"></svg>
+          <div class="trend-legend">
+            <span><i class="lg-dot crit"></i>CRIT</span>
+            <span><i class="lg-dot high"></i>HIGH</span>
+            <span><i class="lg-dot med"></i>MED</span>
+            <span><i class="lg-dot low"></i>LOW</span>
+          </div>
+        </div>
+
+        <div class="country-chips" id="country-chips"></div>
+
         <div class="stats" id="stats">
           <div class="stat"><b id="st-crit">0</b><span>CRITICAL</span></div>
           <div class="stat"><b id="st-high">0</b><span>HIGH</span></div>

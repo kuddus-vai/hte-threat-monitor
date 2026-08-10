@@ -39,6 +39,20 @@ export interface ThreatFeed {
   events: ThreatEvent[];
 }
 
+export interface TrendPoint {
+  ts: string; // ISO hour bucket
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  total: number;
+}
+
+export interface TrendSeries {
+  points: TrendPoint[];
+  updatedAt: string;
+}
+
 export interface RefreshResult {
   ok: boolean;
   fetched: number;
