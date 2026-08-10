@@ -401,7 +401,24 @@ async function showArticle(id: string): Promise<void> {
     document.head.appendChild(ld);
     document.title = `${a.seoTitle} | HTE Threat Monitor`;
   } catch (err) {
-    $("#a-body").innerHTML = `<p>Article unavailable: ${escapeHtml(String(err))}</p>`;
+    // Event aged out of the feed → never dead-end: show recent reports instead
+    const msg = `This report has rotated out of the live feed${String(err).includes("404") ? "" : ` (${String(err)})`}.`;
+    const feed3 = await fetchFeed().catch(() => null);
+    const recent = (feed3?.events ?? []).slice(0, 5);
+    $("#a-body").innerHTML = `<p>${escapeHtml(msg)}</p>`;
+    $("#a-sub").textContent = "Browse the latest briefings below:";
+    $("#a-title").textContent = "Report expired";
+    const box = $("#a-related");
+    box.innerHTML = "<h3>LATEST REPORTS</h3>";
+    for (const r of recent) {
+      const item = document.createElement("div");
+      item.className = "related-item";
+      item.innerHTML = `<span class="r-sev ${r.severity}">${r.severity.toUpperCase()}</span> ${escapeHtml(r.title.slice(0, 90))}`;
+      item.addEventListener("click", () => {
+        location.hash = `#/article/${encodeURIComponent(r.id)}`;
+      });
+      box.appendChild(item);
+    }
   }
 }
 

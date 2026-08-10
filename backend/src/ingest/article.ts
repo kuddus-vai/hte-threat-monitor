@@ -28,7 +28,7 @@ export interface Article {
 
 const key = (id: string) => `hte:article:v1:${id}`;
 
-async function readCached(id: string): Promise<Article | null> {
+export async function readCachedArticle(id: string): Promise<Article | null> {
   if (!config.upstashUrl) return null;
   try {
     const res = await fetch(`${config.upstashUrl}/get/${key(id)}`, {
@@ -40,6 +40,10 @@ async function readCached(id: string): Promise<Article | null> {
   } catch {
     return null;
   }
+}
+
+async function readCached(id: string): Promise<Article | null> {
+  return readCachedArticle(id);
 }
 
 async function writeCached(article: Article): Promise<void> {
