@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node -e \"require('fs').writeFileSync('dist/_headers', '/assets/*\\n  Cache-Control: public, max-age=31536000, immutable\\n\\n/index.html\\n  Cache-Control: public, max-age=0, must-revalidate\\n')\"",
     "preview": "vite preview"
   },
   "dependencies": {
