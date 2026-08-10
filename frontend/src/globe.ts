@@ -54,6 +54,66 @@ export function updateGlobe(events: ThreatEvent[]): void {
   globe.ringsData(
     withCoords.filter((e) => e.severity === "critical" || e.severity === "high").slice(0, 60),
   );
+  updateArcs(withCoords);
+}
+
+/** Arc pairs: same actor (or same category) active in 2+ countries → campaign trail. */
+function computeArcs(events: ThreatEvent[]): Array<{ startLat: number; startLng: number; endLat: number; endLng: number }> {
+  const arcs: Array<{ startLat: number; startLng: number; endLat: number; endLng: number }> = [];
+  const pushChain = (label: string, evs: ThreatEvent[]) => {
+    const byCountry = new Map<string, ThreatEvent>();
+    for (const e of evs) if (!byCountry.has(e.country!)) byCountry.set(e.country!, e);
+    const countries = [...byCountry.values()];
+    if (countries.length < 2) return;
+    for (let i = 0; i < countries.length - 1 && arcs.length < 24; i++) {
+      const a = countries[i];
+      const b = countries[i + 1];
+      if (a.country === b.country) continue;
+      arcs.push({ startLat: a.lat!, startLng: a.lon!, endLat: b.lat!, endLng: b.lon! });
+    }
+    void label;
+  };
+
+  // 1) same actor across countries (APT campaigns)
+  const byActor = new Map<string, ThreatEvent[]>();
+  for (const e of events) {
+    if (e.actor && e.country && e.lat !== undefined && e.lon !== undefined) {
+      const arr = byActor.get(e.actor) ?? [];
+      arr.push(e);
+      byActor.set(e.actor, arr);
+    }
+  }
+  for (const [actor, evs] of byActor) pushChain(actor, evs);
+
+  // 2) fallback: same category across countries (breach/outage clusters)
+  if (arcs.length === 0) {
+    const byCat = new Map<string, ThreatEvent[]>();
+    for (const e of events) {
+      if (e.country && e.lat !== undefined && e.lon !== undefined) {
+        const arr = byCat.get(e.category) ?? [];
+        arr.push(e);
+        byCat.set(e.category, arr);
+      }
+    }
+    for (const [cat, evs] of byCat) pushChain(cat, evs);
+  }
+  return arcs;
+}
+
+export function updateArcs(events: ThreatEvent[]): void {
+  if (!globe) return;
+  const arcs = computeArcs(events);
+  globe.arcsData(arcs);
+  globe.arcStartLat("startLat");
+  globe.arcStartLng("startLng");
+  globe.arcEndLat("endLat");
+  globe.arcEndLng("endLng");
+  globe.arcColor(() => ["rgba(244,63,94,0.7)", "rgba(56,189,248,0.4)"]);
+  globe.arcAltitude(0.35);
+  globe.arcStroke(0.4);
+  globe.arcDashLength(0.5);
+  globe.arcDashGap(0.25);
+  globe.arcDashAnimateTime(2500);
 }
 
 function tooltipHtml(e: ThreatEvent): string {
