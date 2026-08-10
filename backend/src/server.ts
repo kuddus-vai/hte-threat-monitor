@@ -7,6 +7,7 @@ import type { ThreatFeed } from "./types.js";
 import { cache } from "./cache/cache.js";
 import { runRefresh } from "./ingest/pipeline.js";
 import { ollamaHealth } from "./ai/ollama.js";
+import { getWeeklySummary } from "./ingest/weekly.js";
 import { config } from "./config.js";
 
 export interface Env {
@@ -94,6 +95,14 @@ export async function handleTrends(_req: Request, env: Env): Promise<Response> {
   );
 }
 
+/** GET /api/summary — weekly AI executive brief (cached 24h). */
+export async function handleSummary(req: Request, env: Env): Promise<Response> {
+  const force = new URL(req.url).searchParams.get("force") === "1";
+  const summary = await getWeeklySummary(force);
+  if (!summary) return json({ error: "no data yet" }, 404, env);
+  return json(summary, 200, env);
+}
+
 function emptyFeed(): ThreatFeed {
   return { updatedAt: new Date().toISOString(), sourceCount: 0, total: 0, events: [] };
 }
@@ -109,6 +118,7 @@ export function createDevServer(): LocalRouter {
     [/^\/api\/health$/, "GET", handleHealth],
     [/^\/api\/stats$/, "GET", handleStats],
     [/^\/api\/trends$/, "GET", handleTrends],
+    [/^\/api\/summary$/, "GET", handleSummary],
   ];
 
   return {

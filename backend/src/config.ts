@@ -48,4 +48,8 @@ export const config = {
   upstashToken: env.UPSTASH_REDIS_REST_TOKEN || "",
   refreshIntervalMin: Number(env.REFRESH_INTERVAL_MIN || 15),
   corsOrigin: env.CORS_ORIGIN || "http://localhost:5173",
+  // Phase 3 alerts: ntfy.sh topic (zero-account) + optional Telegram
+  ntfyTopic: env.NTFY_TOPIC || "",
+  telegramBotToken: env.TELEGRAM_BOT_TOKEN || "",
+  telegramChatId: env.TELEGRAM_CHAT_ID || "",
 };

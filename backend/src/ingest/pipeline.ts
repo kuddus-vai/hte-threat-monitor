@@ -8,6 +8,7 @@ import { config } from "../config.js";
 import { RSS_SOURCES, fetchRss } from "./rss.js";
 import { fetchOtxPulses, otxPulseToEvent } from "./otx.js";
 import { aiExtractEvent, aiExtractHeuristic } from "../ai/extract.js";
+import { runAlerts } from "./alerts.js";
 import { cache } from "../cache/cache.js";
 
 const MAX_EVENTS = 120; // cap the feed so the globe stays snappy
@@ -147,11 +148,15 @@ async function doRefresh(): Promise<RefreshResult> {
     });
   }
 
+  // 6) Alert on NEW critical/high events (deduped, ntfy + optional Telegram)
+  const alerted = await runAlerts(capped);
+
   return {
     ok: sourcesOk.length > 0,
     fetched: rawItems.length,
     stored: capped.length,
     aiProcessed,
+    alerted,
     sourcesOk,
     sourcesFailed,
     durationMs: Date.now() - started,

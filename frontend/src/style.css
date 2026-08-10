@@ -148,6 +148,19 @@ body {
 .fbtn.med.active { background: var(--med); border-color: var(--med); color: #1a1200; }
 .fbtn.low.active { background: var(--low); border-color: var(--low); color: #02140a; }
 
+/* ── weekly exec brief ─────────────────────── */
+.summary-card {
+  margin: 0 14px 10px; padding: 10px 12px;
+  background: rgba(56,189,248,0.05);
+  border: 1px solid var(--border); border-radius: 10px;
+}
+.summary-head { font-size: 0.66rem; color: var(--accent); letter-spacing: 1.5px; margin-bottom: 6px; }
+.summary-headline { font-size: 0.78rem; font-weight: 700; line-height: 1.4; margin-bottom: 6px; }
+.summary-list { list-style: none; margin-bottom: 6px; }
+.summary-list li { font-size: 0.7rem; color: var(--dim); line-height: 1.4; padding-left: 12px; position: relative; margin-bottom: 3px; }
+.summary-list li::before { content: "▸"; position: absolute; left: 0; color: var(--crit); }
+.summary-rec { font-size: 0.7rem; color: var(--low); line-height: 1.4; border-top: 1px dashed rgba(34,197,94,0.25); padding-top: 6px; }
+
 /* ── search + category + export ───────────── */
 .search-row { display: flex; gap: 6px; padding: 0 14px 8px; }
 #search-box {
@@ -245,6 +258,22 @@ body {
   letter-spacing: 0.4px;
 }
 .empty { padding: 20px; text-align: center; color: var(--dim); font-size: 0.8rem; }
+
+/* ── outage strip ──────────────────────────── */
+.outage-strip { padding: 0 14px 8px; }
+.outage-list { display: flex; flex-direction: column; gap: 4px; }
+.outage-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.66rem; color: var(--dim);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 8px; padding: 5px 8px;
+}
+.outage-item .o-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.outage-item .o-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.outage-item.critical .o-dot { background: var(--crit); box-shadow: 0 0 6px var(--crit); }
+.outage-item.medium .o-dot { background: var(--med); }
+.outage-item.high .o-dot { background: var(--high); }
 
 /* ── ticker ──────────────────────────────── */
 #ticker {

@@ -33,6 +33,13 @@
           <span id="feed-count" class="badge">0</span>
         </div>
 
+        <div id="summary-card" class="summary-card hidden">
+          <div class="summary-head">🧠 WEEKLY EXEC BRIEF <span class="trend-sub" id="summary-src"></span></div>
+          <div class="summary-headline" id="summary-headline"></div>
+          <ul class="summary-list" id="summary-threats"></ul>
+          <div class="summary-rec" id="summary-rec"></div>
+        </div>
+
         <div class="filters" id="filters">
           <button class="fbtn active" data-sev="all">ALL</button>
           <button class="fbtn crit" data-sev="critical">CRIT</button>
@@ -69,6 +76,11 @@
         </div>
 
         <div class="country-chips" id="country-chips"></div>
+
+        <div id="outage-strip" class="outage-strip hidden">
+          <div class="trend-head">⚡ INFRA STATUS <span class="trend-sub">outages & incidents</span></div>
+          <div id="outage-list" class="outage-list"></div>
+        </div>
 
         <div class="stats" id="stats">
           <div class="stat"><b id="st-crit">0</b><span>CRITICAL</span></div>

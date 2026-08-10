@@ -58,6 +58,7 @@ export interface RefreshResult {
   fetched: number;
   stored: number;
   aiProcessed: number;
+  alerted: number;
   sourcesOk: string[];
   sourcesFailed: string[];
   durationMs: number;

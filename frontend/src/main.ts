@@ -156,6 +156,28 @@ async function loadTrends(): Promise<void> {
   }
 }
 
+// ── weekly exec brief ────────────────────────────────
+async function loadSummary(): Promise<void> {
+  try {
+    const res = await fetch("/api/summary");
+    if (!res.ok) return;
+    const s = (await res.json()) as {
+      headline: string;
+      topThreats: string[];
+      recommendation: string;
+      source: string;
+    };
+    const card = $("#summary-card");
+    card.classList.remove("hidden");
+    $("#summary-headline").textContent = s.headline;
+    $("#summary-src").textContent = s.source === "ai" ? "AI GENERATED" : "HEURISTIC";
+    $("#summary-threats").innerHTML = s.topThreats.map((t) => `<li>${escapeHtml(t)}</li>`).join("");
+    $("#summary-rec").textContent = `💡 ${s.recommendation}`;
+  } catch {
+    /* keep hidden */
+  }
+}
+
 // ── ticker ───────────────────────────────────────────────
 function renderTicker(): void {
   const track = $("#ticker-track");
@@ -174,6 +196,27 @@ function renderTicker(): void {
     .join("");
   // duplicate content so the -50% translate loops seamlessly
   track.innerHTML = html + html;
+}
+
+// ── outage strip (infra status) ────────────────────────
+function renderOutages(): void {
+  const strip = $("#outage-strip");
+  const outages = feed.events.filter((e) => e.category === "outage").slice(0, 4);
+  if (outages.length === 0) {
+    strip.classList.add("hidden");
+    return;
+  }
+  strip.classList.remove("hidden");
+  $("#outage-list").innerHTML = outages
+    .map(
+      (e) =>
+        `<div class="outage-item ${e.severity}">
+          <span class="o-dot"></span>
+          <span class="o-title">${escapeHtml(e.title.slice(0, 60))}</span>
+          <span>${e.source.split(" ")[0]}</span>
+        </div>`,
+    )
+    .join("");
 }
 
 // ── filters & controls ───────────────────────────────────
@@ -239,6 +282,7 @@ async function refresh(): Promise<void> {
     renderStats();
     renderTicker();
     renderCountryChips();
+    renderOutages();
     $("#updated-at").textContent = `UPDATED ${fmtDate(feed.updatedAt)} · ${feed.sourceCount} SOURCES`;
   } catch (err) {
     $("#status-text").textContent = `feed error: ${String(err)}`;
@@ -276,9 +320,11 @@ bindServicesModal();
 void refresh();
 void checkHealth();
 void loadTrends();
+void loadSummary();
 setInterval(() => void refresh(), 60_000);
 setInterval(() => void loadTrends(), 5 * 60_000);
 setInterval(() => void checkHealth(), 30_000);
+setInterval(() => void loadSummary(), 30 * 60_000);
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);

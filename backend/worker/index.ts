@@ -20,6 +20,9 @@ export interface Env {
   OTX_API_KEY?: string;
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
+  NTFY_TOPIC?: string;
+  TELEGRAM_BOT_TOKEN?: string;
+  TELEGRAM_CHAT_ID?: string;
 }
 
 type Handler = (req: Request, env: { corsOrigin: string; cacheKind: string }) => Promise<Response>;
@@ -30,6 +33,7 @@ interface Handlers {
   handleHealth: Handler;
   handleStats: Handler;
   handleTrends: Handler;
+  handleSummary: Handler;
 }
 
 let handlersPromise: Promise<Handlers> | null = null;
@@ -49,6 +53,9 @@ async function getHandlers(e: Env): Promise<Handlers> {
         UPSTASH_REDIS_REST_URL: e.UPSTASH_REDIS_REST_URL || "",
         UPSTASH_REDIS_REST_TOKEN: e.UPSTASH_REDIS_REST_TOKEN || "",
         REFRESH_INTERVAL_MIN: "15",
+        NTFY_TOPIC: e.NTFY_TOPIC || "",
+        TELEGRAM_BOT_TOKEN: e.TELEGRAM_BOT_TOKEN || "",
+        TELEGRAM_CHAT_ID: e.TELEGRAM_CHAT_ID || "",
       },
     };
     handlersPromise = import("../src/server.js") as unknown as Promise<Handlers>;
@@ -86,6 +93,8 @@ export default {
         return handlers.handleStats(request, ctx);
       case "/api/trends":
         return handlers.handleTrends(request, ctx);
+      case "/api/summary":
+        return handlers.handleSummary(request, ctx);
     }
 
     // Static dashboard assets (frontend/dist) served from the same origin.
