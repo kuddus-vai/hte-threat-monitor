@@ -2,6 +2,7 @@ import "./style.css";
 import type { ThreatEvent, ThreatFeed, TrendPoint } from "../../backend/src/types";
 import { initGlobe, updateGlobe } from "./globe";
 import { SEV_COLORS, fetchFeed, fetchHealth, fmtDate, fmtTime } from "./api";
+import { renderAdSlot } from "./ads";
 
 const $ = <T extends HTMLElement>(sel: string): T => document.querySelector(sel) as T;
 
@@ -65,7 +66,8 @@ function renderFeed(): void {
         setCountry(chip.dataset.country ?? "");
         return;
       }
-      window.open(e.url, "_blank");
+      // Phase 4: open internal article page — keeps users on-site
+      location.hash = `#/article/${encodeURIComponent(e.id)}`;
     });
     list.appendChild(li);
   }
@@ -316,6 +318,108 @@ function bindServicesModal(): void {
   });
 }
 bindServicesModal();
+
+// ── Phase 4: article router (hash-based SPA) ─────────────
+interface ArticlePayload {
+  id: string;
+  seoTitle: string;
+  description: string;
+  body: string;
+  category: string;
+  severity: string;
+  country?: string;
+  actor?: string;
+  source: string;
+  sourceUrl: string;
+  publishedAt: string;
+  aiGenerated: boolean;
+  jsonLd: Record<string, unknown>;
+}
+
+function showDashboard(): void {
+  $("#article-view").classList.add("hidden");
+  $("#globe").classList.remove("hidden");
+  $("#topbar").classList.remove("hidden");
+  $("#sidebar").classList.remove("hidden");
+  $("#ticker").classList.remove("hidden");
+  $("#legend").classList.remove("hidden");
+}
+
+async function showArticle(id: string): Promise<void> {
+  // hide chrome, show article shell
+  $("#globe").classList.add("hidden");
+  $("#topbar").classList.add("hidden");
+  $("#sidebar").classList.add("hidden");
+  $("#ticker").classList.add("hidden");
+  $("#legend").classList.add("hidden");
+  const view = $("#article-view");
+  view.classList.remove("hidden");
+  view.scrollTop = 0;
+
+  try {
+    const res = await fetch(`/api/article/${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const a = (await res.json()) as ArticlePayload;
+
+    $("#a-sev").textContent = a.severity;
+    $("#a-sev").className = `sev-pill ${a.severity}`;
+    $("#a-cat").textContent = a.category.replace("_", " ");
+    $("#a-source").textContent = a.source;
+    $("#a-date").textContent = fmtDate(a.publishedAt);
+    $("#a-title").textContent = a.seoTitle;
+    $("#a-sub").textContent = a.description;
+    $("#a-body").innerHTML = a.body
+      .split(/\n{2,}/)
+      .map((p) => `<p>${escapeHtml(p)}</p>`)
+      .join("");
+    $("#a-attribution").textContent = `Reported by ${a.source} · ${a.aiGenerated ? "AI-generated briefing" : "Auto briefing"} · HTE Threat Monitor`;
+    $("#a-source-link").setAttribute("href", a.sourceUrl);
+
+    // Ad slots (top + mid)
+    renderAdSlot($("#ad-slot-top"), a.category);
+    renderAdSlot($("#ad-slot-mid"), a.category);
+
+    // related events (same category)
+    const feed2 = await fetchFeed();
+    const related = feed2.events.filter((e) => e.category === a.category && e.id !== a.id).slice(0, 4);
+    const box = $("#a-related");
+    box.innerHTML = related.length ? "<h3>RELATED EVENTS</h3>" : "";
+    for (const r of related) {
+      const item = document.createElement("div");
+      item.className = "related-item";
+      item.innerHTML = `<span class="r-sev ${r.severity}">${r.severity.toUpperCase()}</span> ${escapeHtml(r.title.slice(0, 90))}`;
+      item.addEventListener("click", () => {
+        location.hash = `#/article/${encodeURIComponent(r.id)}`;
+      });
+      box.appendChild(item);
+    }
+
+    // JSON-LD for SEO
+    const ld = document.createElement("script");
+    ld.type = "application/ld+json";
+    ld.textContent = JSON.stringify(a.jsonLd);
+    document.head.appendChild(ld);
+    document.title = `${a.seoTitle} | HTE Threat Monitor`;
+  } catch (err) {
+    $("#a-body").innerHTML = `<p>Article unavailable: ${escapeHtml(String(err))}</p>`;
+  }
+}
+
+function route(): void {
+  const m = location.hash.match(/^#\/article\/(.+)$/);
+  if (m) {
+    void showArticle(decodeURIComponent(m[1]));
+  } else {
+    showDashboard();
+    document.title = "HTE Cyber Threat & Tech Monitor";
+  }
+}
+
+window.addEventListener("hashchange", route);
+$("#article-back").addEventListener("click", () => {
+  location.hash = "#/";
+});
+void route();
 
 void refresh();
 void checkHealth();

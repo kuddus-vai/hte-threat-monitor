@@ -275,6 +275,53 @@ body {
 .outage-item.medium .o-dot { background: var(--med); }
 .outage-item.high .o-dot { background: var(--high); }
 
+/* ── article view ─────────────────────────── */
+.article-view {
+  position: absolute; inset: 0; z-index: 20;
+  overflow-y: auto;
+  background: radial-gradient(ellipse at top, #0b1326 0%, var(--bg) 60%);
+  padding: 24px;
+}
+.article-back {
+  cursor: pointer; margin-bottom: 16px;
+  background: rgba(255,255,255,0.05); color: var(--accent);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 14px; font-size: 0.72rem; font-weight: 700; letter-spacing: 1px;
+}
+.article-back:hover { background: rgba(56,189,248,0.15); }
+.article-card {
+  max-width: 760px; margin: 0 auto;
+  background: var(--panel);
+  border: 1px solid var(--border); border-radius: 16px;
+  padding: 28px 32px;
+}
+.article-head .meta { display: flex; gap: 8px; align-items: center; font-size: 0.68rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+.article-head h1 { font-size: 1.35rem; line-height: 1.35; margin-bottom: 10px; }
+.a-sub { font-size: 0.82rem; color: var(--dim); line-height: 1.5; }
+.ad-slot {
+  margin: 18px 0; padding: 14px; text-align: center;
+  background: rgba(255,255,255,0.03);
+  border: 1px dashed rgba(255,255,255,0.1); border-radius: 10px;
+}
+.ad-slot .sponsored { font-size: 0.6rem; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+.ad-slot .sponsor-link { font-size: 0.78rem; color: var(--accent); }
+.article-body { font-size: 0.92rem; line-height: 1.75; color: var(--text); }
+.article-body p { margin-bottom: 14px; }
+.article-foot { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.article-foot p { font-size: 0.7rem; color: var(--dim); }
+.related { margin-top: 22px; }
+.related h3 { font-size: 0.7rem; color: var(--accent); letter-spacing: 1.5px; margin-bottom: 8px; }
+.related-item {
+  display: block; padding: 8px 10px; margin-bottom: 6px; cursor: pointer;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;
+  font-size: 0.76rem; color: var(--text); transition: border-color 0.15s;
+}
+.related-item:hover { border-color: var(--accent); }
+.related-item .r-sev { font-weight: 800; margin-right: 6px; }
+.r-sev.critical { color: var(--crit); } .r-sev.high { color: var(--high); }
+.r-sev.medium { color: var(--med); } .r-sev.low { color: var(--low); }
+
 /* ── ticker ──────────────────────────────── */
 #ticker {
   position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;

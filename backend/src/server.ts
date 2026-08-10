@@ -8,6 +8,7 @@ import { cache } from "./cache/cache.js";
 import { runRefresh } from "./ingest/pipeline.js";
 import { ollamaHealth } from "./ai/ollama.js";
 import { getWeeklySummary } from "./ingest/weekly.js";
+import { getArticle, sitemapUrls } from "./ingest/article.js";
 import { config } from "./config.js";
 
 export interface Env {
@@ -103,6 +104,34 @@ export async function handleSummary(req: Request, env: Env): Promise<Response> {
   return json(summary, 200, env);
 }
 
+/** GET /api/article/:id — AI-extended article page payload. */
+export async function handleArticle(req: Request, env: Env): Promise<Response> {
+  const url = new URL(req.url);
+  const id = decodeURIComponent(url.pathname.split("/").pop() ?? "");
+  const force = url.searchParams.get("force") === "1";
+  if (!id) return json({ error: "missing id" }, 400, env);
+  const feed = (await cache.get()) ?? emptyFeed();
+  const ev = feed.events.find((e) => e.id === id);
+  if (!ev) return json({ error: "event not found" }, 404, env);
+  const article = await getArticle(ev, feed.events, force);
+  return json(article, 200, env);
+}
+
+/** GET /sitemap.xml — SEO sitemap of article pages. */
+export async function handleSitemap(req: Request, env: Env): Promise<Response> {
+  const url = new URL(req.url);
+  const base = `${url.protocol}//${url.host}`;
+  const urls = await sitemapUrls(base);
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map((u) => `  <url><loc>${u}</loc></url>`).join("\n")}
+</urlset>`;
+  return new Response(xml, {
+    status: 200,
+    headers: { "content-type": "application/xml", ...corsHeaders(env) },
+  });
+}
+
 function emptyFeed(): ThreatFeed {
   return { updatedAt: new Date().toISOString(), sourceCount: 0, total: 0, events: [] };
 }
@@ -119,6 +148,8 @@ export function createDevServer(): LocalRouter {
     [/^\/api\/stats$/, "GET", handleStats],
     [/^\/api\/trends$/, "GET", handleTrends],
     [/^\/api\/summary$/, "GET", handleSummary],
+    [/^\/api\/article\/.+$/, "GET", handleArticle],
+    [/^\/sitemap\.xml$/, "GET", handleSitemap],
   ];
 
   return {

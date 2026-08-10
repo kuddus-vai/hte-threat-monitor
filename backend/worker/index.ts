@@ -34,6 +34,8 @@ interface Handlers {
   handleStats: Handler;
   handleTrends: Handler;
   handleSummary: Handler;
+  handleArticle: Handler;
+  handleSitemap: Handler;
 }
 
 let handlersPromise: Promise<Handlers> | null = null;
@@ -95,6 +97,13 @@ export default {
         return handlers.handleTrends(request, ctx);
       case "/api/summary":
         return handlers.handleSummary(request, ctx);
+      case "/sitemap.xml":
+        return handlers.handleSitemap(request, ctx);
+    }
+
+    // article route: /api/article/<id>
+    if (url.pathname.startsWith("/api/article/")) {
+      return handlers.handleArticle(request, ctx);
     }
 
     // Static dashboard assets (frontend/dist) served from the same origin.
