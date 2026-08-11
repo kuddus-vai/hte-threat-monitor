@@ -61,6 +61,14 @@
         <label class="lp-item"><span class="lp-dot" style="background:#ffaa00"></span>COUNTRY LABELS<input type="checkbox" id="ly-labels" checked /></label>
         <label class="lp-item"><span class="lp-dot" style="background:#94a3b8"></span>TACTICAL GRID<input type="checkbox" id="ly-grid" checked /></label>
         <div class="lp-sep"></div>
+        <div class="lp-head small">THREAT ZONES</div>
+        <label class="lp-item"><span class="lp-dot" style="background:#ff3333"></span>RANSOMWARE ZONES<input type="checkbox" id="ly-rans" checked /></label>
+        <label class="lp-item"><span class="lp-dot" style="background:#a855f7"></span>APT ACTIVITY<input type="checkbox" id="ly-apt" checked /></label>
+        <label class="lp-item"><span class="lp-dot" style="background:#ff7a45"></span>DATA BREACHES<input type="checkbox" id="ly-breach" checked /></label>
+        <label class="lp-item"><span class="lp-dot" style="background:#eab308"></span>VULN WATCH<input type="checkbox" id="ly-vuln" checked /></label>
+        <label class="lp-item"><span class="lp-dot" style="background:#9ca3af"></span>OUTAGES<input type="checkbox" id="ly-outage" checked /></label>
+        <label class="lp-item"><span class="lp-dot" style="background:#ff5555"></span>CRITICAL ZONES<input type="checkbox" id="ly-crit" checked /></label>
+        <div class="lp-sep"></div>
         <div class="lp-head small">SEVERITY</div>
         <div class="lp-sev">
           <span class="lp-sev-item" style="color:#ff3333">■ CRIT <b id="st-crit-lp">0</b></span>
@@ -142,6 +150,11 @@
           <div class="stat"><b id="st-high">0</b><span>HIGH</span></div>
           <div class="stat"><b id="st-med">0</b><span>MEDIUM</span></div>
           <div class="stat"><b id="st-low">0</b><span>LOW</span></div>
+        </div>
+
+        <div id="latest-articles" class="latest-articles">
+          <div class="la-head">📄 LATEST REPORTS</div>
+          <ul id="latest-list" class="la-list"></ul>
         </div>
 
         <ul id="feed-list" class="feed-list"></ul>

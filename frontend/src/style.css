@@ -228,7 +228,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 14px;
   backdrop-filter: blur(10px);
-  overflow: hidden;
+  overflow-y: auto;
 }
 .panel-head {
   display: flex; justify-content: space-between; align-items: center;
@@ -379,8 +379,19 @@ body {
 #st-crit { color: var(--crit); } #st-high { color: var(--high); }
 #st-med { color: var(--med); } #st-low { color: var(--low); }
 
-.feed-list { flex: 1; overflow-y: auto; padding: 0 10px 10px; list-style: none; }
+.feed-list { flex: 1 0 auto; padding: 0 10px 10px; list-style: none; }
 .feed-list::-webkit-scrollbar { width: 6px; }
+.latest-articles { padding: 0 14px 8px; border-top: 1px solid var(--border); }
+.la-head { font-size: 0.66rem; color: var(--accent); letter-spacing: 1.5px; margin: 8px 0 6px; }
+.la-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.la-list a {
+  display: block; padding: 5px 8px; border-radius: 6px;
+  font-size: 0.66rem; color: var(--dim); text-decoration: none;
+  background: rgba(255,255,255,0.03); border: 1px solid transparent;
+  transition: all 0.15s;
+}
+.la-list a:hover { color: #7dd3fc; border-color: rgba(56,189,248,0.4); background: rgba(56,189,248,0.08); }
+.la-list .la-sev { font-weight: 800; margin-right: 6px; }
 .feed-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
 .feed-item {

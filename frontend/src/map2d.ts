@@ -9,9 +9,9 @@ import { SEV_COLORS } from "./api";
  */
 
 let map: L.Map | null = null;
-let markers: L.CircleMarker[] = [];
-let arcLines: L.Polyline[] = [];
-let labelMarkers: L.Marker[] = [];
+const markers: L.Layer[] = [];
+const arcLines: L.Polyline[] = [];
+const labelMarkers: L.Marker[] = [];
 
 const TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 const TILE_ATTR =
@@ -23,15 +23,38 @@ export function initMap2d(el: HTMLElement): void {
   L.tileLayer(TILE_URL, { attribution: TILE_ATTR, maxZoom: 19 }).addTo(map);
 }
 
-export function updateMap2d(events: ThreatEvent[], opts: { points: boolean; arcs: boolean; labels: boolean }): void {
+export interface Map2dOptions {
+  points: boolean;
+  arcs: boolean;
+  labels: boolean;
+  rings: boolean;
+  ransomware: boolean;
+  apt: boolean;
+  breach: boolean;
+  vuln: boolean;
+  outage: boolean;
+  critical: boolean;
+}
+
+// distinct tactical symbols per threat zone
+const ZONE_STYLE: Record<string, { color: string; glyph: string }> = {
+  ransomware: { color: "#ff3333", glyph: "⬢" },
+  apt: { color: "#a855f7", glyph: "▲" },
+  breach: { color: "#ff7a45", glyph: "▣" },
+  vuln: { color: "#eab308", glyph: "⚠" },
+  outage: { color: "#9ca3af", glyph: "✕" },
+  critical: { color: "#ff5555", glyph: "◎" },
+};
+
+export function updateMap2d(events: ThreatEvent[], opts: Map2dOptions): void {
   if (!map) return;
   // clear
   markers.forEach((m) => m.remove());
   arcLines.forEach((l) => l.remove());
   labelMarkers.forEach((m) => m.remove());
-  markers = [];
-  arcLines = [];
-  labelMarkers = [];
+  markers.length = 0;
+  arcLines.length = 0;
+  labelMarkers.length = 0;
 
   const withCoords = events.filter((e) => e.lat !== undefined && e.lon !== undefined);
 
@@ -48,6 +71,48 @@ export function updateMap2d(events: ThreatEvent[], opts: { points: boolean; arcs
       m.bindPopup(popupHtml(e));
       m.addTo(map!);
       markers.push(m);
+    }
+  }
+
+  // threat zones — category-driven overlay symbols
+  const zoneFilter: Array<[keyof Map2dOptions, (e: ThreatEvent) => boolean, string]> = [
+    ["ransomware", (e) => e.category === "ransomware", "ransomware"],
+    ["apt", (e) => !!e.actor, "apt"],
+    ["breach", (e) => e.category === "data_breach", "breach"],
+    ["vuln", (e) => e.category === "vulnerability", "vuln"],
+    ["outage", (e) => e.category === "outage", "outage"],
+    ["critical", (e) => e.severity === "critical", "critical"],
+  ];
+  for (const [key, filter, zone] of zoneFilter) {
+    if (!opts[key]) continue;
+    const style = ZONE_STYLE[zone];
+    for (const e of withCoords.filter(filter).slice(0, 60)) {
+      const mk = L.marker([e.lat as number, e.lon as number], {
+        icon: L.divIcon({
+          className: "map2d-zone",
+          html: `<span style="color:${style.color}">${style.glyph}</span>`,
+          iconSize: [14, 14],
+        }),
+      });
+      mk.bindPopup(popupHtml(e));
+      mk.addTo(map!);
+      markers.push(mk);
+    }
+  }
+
+  if (opts.rings) {
+    // pulsing-style highlight rings around critical/high hotspots
+    for (const e of withCoords.filter((x) => x.severity === "critical" || x.severity === "high")) {
+      const ring = L.circle([e.lat as number, e.lon as number], {
+        radius: 90000,
+        color: e.severity === "critical" ? "#ff3333" : "#ffaa00",
+        weight: 1,
+        fill: false,
+        opacity: 0.45,
+        dashArray: "3 5",
+      });
+      ring.addTo(map!);
+      markers.push(ring);
     }
   }
 

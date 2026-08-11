@@ -38,14 +38,33 @@ function setMapMode(threeD: boolean): void {
       mapEl.dataset.ready = "1";
     }
     resizeMap2d();
-    updateMap2d(filteredEvents(), {
-      points: layerState.points,
-      arcs: layerState.arcs,
-      labels: layerState.labels,
-    });
+    updateMap2d(filteredEvents(), map2dOpts());
   }
 }
-let layerState = { points: true, arcs: true, rings: true, labels: true };
+let layerState = {
+  points: true,
+  arcs: true,
+  rings: true,
+  labels: true,
+  ransomware: true,
+  apt: true,
+  breach: true,
+  vuln: true,
+  outage: true,
+  critical: true,
+};
+const map2dOpts = () => ({
+  points: layerState.points,
+  arcs: layerState.arcs,
+  labels: layerState.labels,
+  rings: layerState.rings,
+  ransomware: layerState.ransomware,
+  apt: layerState.apt,
+  breach: layerState.breach,
+  vuln: layerState.vuln,
+  outage: layerState.outage,
+  critical: layerState.critical,
+});
 function resizeGlobe(): void {
   // re-fit the 3D globe after its container becomes visible
   setTimeout(() => {
@@ -133,11 +152,25 @@ function renderAll(): void {
   renderTicker();
   renderCountryChips();
   renderOutages();
+  renderLatestArticles();
   if (mapMode3D) {
     updateGlobe(filteredEvents());
   } else {
-    updateMap2d(filteredEvents(), { points: layerState.points, arcs: layerState.arcs, labels: layerState.labels });
+    updateMap2d(filteredEvents(), map2dOpts());
   }
+}
+
+// ── LATEST REPORTS — real <a href> links (crawlable + clickable) ──
+function renderLatestArticles(): void {
+  const box = $("#latest-list");
+  if (!box) return;
+  const recent = [...feed.events].sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1)).slice(0, 6);
+  box.innerHTML = recent
+    .map(
+      (e) =>
+        `<li><a href="/article/${encodeURIComponent(e.id)}"><span class="la-sev" style="color:${SEV_COLORS[e.severity]}">${e.severity.toUpperCase()}</span>${escapeHtml(e.title.slice(0, 60))}</a></li>`,
+    )
+    .join("");
 }
 
 function renderFeed(): void {
@@ -174,8 +207,9 @@ function renderFeed(): void {
         setCountry(chip.dataset.country ?? "");
         return;
       }
-      // Phase 4: open internal article page — keeps users on-site
-      location.hash = `#/article/${encodeURIComponent(e.id)}`;
+      // Phase 4: open internal article page — keeps users on-site (real URL for SEO)
+      history.pushState({}, "", `/article/${encodeURIComponent(e.id)}`);
+      route();
     });
     list.appendChild(li);
   }
@@ -389,40 +423,48 @@ function bindFilters(): void {
     $("#toggle-2d").classList.add("active");
     $("#toggle-3d").classList.remove("active");
   });
-  const syncLayers = (name: keyof typeof layerState) => {
-    layerState[name] = !layerState[name];
-    if (mapMode3D) {
-      setLayer(name, layerState[name]);
-    } else {
-      updateMap2d(filteredEvents(), { points: layerState.points, arcs: layerState.arcs, labels: layerState.labels });
-    }
-  };
   $("#layer-points").addEventListener("click", (ev) => {
     (ev.target as HTMLButtonElement).classList.toggle("active");
-    syncLayers("points");
+    layerState.points = !layerState.points;
+    if (mapMode3D) setLayer("points", layerState.points);
+    else updateMap2d(filteredEvents(), map2dOpts());
   });
   $("#layer-arcs").addEventListener("click", (ev) => {
     (ev.target as HTMLButtonElement).classList.toggle("active");
-    syncLayers("arcs");
+    layerState.arcs = !layerState.arcs;
+    if (mapMode3D) setLayer("arcs", layerState.arcs);
+    else updateMap2d(filteredEvents(), map2dOpts());
   });
   $("#layer-rings").addEventListener("click", (ev) => {
     (ev.target as HTMLButtonElement).classList.toggle("active");
-    syncLayers("rings");
+    layerState.rings = !layerState.rings;
+    if (mapMode3D) setLayer("rings", layerState.rings);
+    else updateMap2d(filteredEvents(), map2dOpts());
   });
 
   // Phase 5.5: checkbox layers panel
-  const bindLayerChk = (sel: string, name: "points" | "arcs" | "rings" | "labels") => {
+  const globeLayers = ["points", "arcs", "rings", "labels"] as const;
+  const bindLayerChk = (sel: string, name: keyof typeof layerState) => {
     $(sel).addEventListener("change", (ev) => {
       const on = (ev.target as HTMLInputElement).checked;
       layerState[name] = on;
-      if (mapMode3D) setLayer(name, on);
-      else updateMap2d(filteredEvents(), { points: layerState.points, arcs: layerState.arcs, labels: layerState.labels });
+      if (mapMode3D && (globeLayers as readonly string[]).includes(name)) {
+        setLayer(name as "points" | "arcs" | "rings" | "labels", on);
+      } else {
+        updateMap2d(filteredEvents(), map2dOpts());
+      }
     });
   };
   bindLayerChk("#ly-points", "points");
   bindLayerChk("#ly-arcs", "arcs");
   bindLayerChk("#ly-rings", "rings");
   bindLayerChk("#ly-labels", "labels");
+  bindLayerChk("#ly-rans", "ransomware");
+  bindLayerChk("#ly-apt", "apt");
+  bindLayerChk("#ly-breach", "breach");
+  bindLayerChk("#ly-vuln", "vuln");
+  bindLayerChk("#ly-outage", "outage");
+  bindLayerChk("#ly-crit", "critical");
   $("#ly-grid").addEventListener("change", (ev) => {
     const on = (ev.target as HTMLInputElement).checked;
     $("#globe").classList.toggle("grid-on", on);
@@ -474,8 +516,9 @@ async function refresh(): Promise<void> {
     feed = await fetchFeed();
     const events = filteredEvents();
     if (mapMode3D) updateGlobe(events);
-    else updateMap2d(events, { points: layerState.points, arcs: layerState.arcs, labels: layerState.labels });
+    else updateMap2d(events, map2dOpts());
     renderFeed();
+    renderLatestArticles();
     renderStats();
     renderTicker();
     renderCountryChips();
@@ -632,7 +675,8 @@ async function showArticle(id: string): Promise<void> {
       item.className = "related-item";
       item.innerHTML = `<span class="r-sev ${r.severity}">${r.severity.toUpperCase()}</span> ${escapeHtml(r.title.slice(0, 90))}`;
       item.addEventListener("click", () => {
-        location.hash = `#/article/${encodeURIComponent(r.id)}`;
+        history.pushState({}, "", `/article/${encodeURIComponent(r.id)}`);
+        route();
       });
       box.appendChild(item);
     }
@@ -686,11 +730,14 @@ function route(): void {
 }
 
 window.addEventListener("hashchange", route);
+window.addEventListener("popstate", route);
 $("#article-back").addEventListener("click", () => {
-  location.hash = "#/";
+  history.pushState({}, "", "/");
+  route();
 });
 $("#article-map").addEventListener("click", () => {
-  location.hash = "#/";
+  history.pushState({}, "", "/");
+  route();
 });
 void route();
 setMapMode(false); // 2D tactical map is the default view
