@@ -104,8 +104,18 @@ body {
 .lchip:has(input:checked) .lsw { background: #00ff41; box-shadow: 0 0 6px #00ff41; }
 
 /* ── tactical grid overlay on globe ───────── */
-#globe { position: relative; }
-#map2d { position: absolute; inset: 0; z-index: 1; background: #0b0d10; }
+#map-area {
+  position: absolute;
+  top: 110px; left: 218px; right: 388px; bottom: 52px;
+  z-index: 5;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #0b0d10;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+}
+#globe { position: absolute; inset: 0; }
+#map2d { position: absolute; inset: 0; background: #0b0d10; }
 #map2d .map2d-label span {
   color: rgba(0, 255, 65, 0.9); font-size: 10px; font-family: monospace;
   text-shadow: 0 0 4px #000; white-space: nowrap;

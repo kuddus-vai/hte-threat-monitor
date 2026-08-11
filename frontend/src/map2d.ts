@@ -1,27 +1,27 @@
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import * as maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import type { ThreatEvent } from "../../backend/src/types";
 import { SEV_COLORS } from "./api";
 
+type GeoFeature = {
+  type: "Feature";
+  properties: Record<string, unknown>;
+  geometry: { type: string; coordinates: unknown };
+};
+
 /**
- * 2D tactical map (World Monitor style) — Leaflet + CartoDB dark tiles.
- * Default view. The 3D globe stays available via the toggle.
+ * 2D tactical map — MapLibre GL (same engine as World Monitor).
+ * Raster dark basemap (free CARTO tiles, no key) + custom marker/arc layers.
  */
 
-let map: L.Map | null = null;
-const markers: L.Layer[] = [];
-const arcLines: L.Polyline[] = [];
-const labelMarkers: L.Marker[] = [];
+let map: maplibregl.Map | null = null;
+let markerLayers: maplibregl.Marker[] = [];
+let arcSourceId = "arcs";
+let ringSourceId = "rings";
 
 const TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 const TILE_ATTR =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
-
-export function initMap2d(el: HTMLElement): void {
-  if (map) return;
-  map = L.map(el, { zoomControl: true, attributionControl: true, minZoom: 2, maxZoom: 12 }).setView([20, 10], 2);
-  L.tileLayer(TILE_URL, { attribution: TILE_ATTR, maxZoom: 19 }).addTo(map);
-}
 
 export interface Map2dOptions {
   points: boolean;
@@ -36,7 +36,6 @@ export interface Map2dOptions {
   critical: boolean;
 }
 
-// distinct tactical symbols per threat zone
 const ZONE_STYLE: Record<string, { color: string; glyph: string }> = {
   ransomware: { color: "#ff3333", glyph: "⬢" },
   apt: { color: "#a855f7", glyph: "▲" },
@@ -46,35 +45,73 @@ const ZONE_STYLE: Record<string, { color: string; glyph: string }> = {
   critical: { color: "#ff5555", glyph: "◎" },
 };
 
+export function initMap2d(el: HTMLElement): void {
+  if (map) return;
+  map = new maplibregl.Map({
+    container: el,
+    style: {
+      version: 8,
+      sources: {
+        carto: {
+          type: "raster",
+          tiles: [
+            "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
+            "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
+            "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
+            "https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
+          ],
+          tileSize: 256,
+          attribution: TILE_ATTR,
+          maxzoom: 19,
+        },
+        arcs: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
+        rings: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
+      },
+      layers: [
+        { id: "carto", type: "raster", source: "carto" },
+        {
+          id: "ring-layer",
+          type: "line",
+          source: "rings",
+          paint: {
+            "line-color": ["get", "color"],
+            "line-width": 1,
+            "line-opacity": 0.5,
+            "line-dasharray": [3, 4],
+          },
+        },
+        {
+          id: "arc-layer",
+          type: "line",
+          source: "arcs",
+          paint: { "line-color": "#38bdf8", "line-width": 1.2, "line-opacity": 0.6, "line-dasharray": [4, 6] },
+        },
+      ],
+    },
+    center: [10, 20],
+    zoom: 1.8,
+    attributionControl: { compact: true },
+    maxZoom: 14,
+    minZoom: 1.5,
+  });
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+  arcSourceId = "arcs";
+  ringSourceId = "rings";
+}
+
 export function updateMap2d(events: ThreatEvent[], opts: Map2dOptions): void {
   if (!map) return;
-  // clear
-  markers.forEach((m) => m.remove());
-  arcLines.forEach((l) => l.remove());
-  labelMarkers.forEach((m) => m.remove());
-  markers.length = 0;
-  arcLines.length = 0;
-  labelMarkers.length = 0;
+  markerLayers.forEach((m) => m.remove());
+  markerLayers = [];
 
   const withCoords = events.filter((e) => e.lat !== undefined && e.lon !== undefined);
 
   if (opts.points) {
-    for (const e of withCoords.slice(0, 120)) {
-      const c = SEV_COLORS[e.severity] ?? "#888";
-      const m = L.circleMarker([e.lat as number, e.lon as number], {
-        radius: e.severity === "critical" ? 6 : e.severity === "high" ? 5 : 4,
-        color: c,
-        weight: 1,
-        fillColor: c,
-        fillOpacity: 0.75,
-      });
-      m.bindPopup(popupHtml(e));
-      m.addTo(map!);
-      markers.push(m);
+    for (const e of withCoords.slice(0, 150)) {
+      markerLayers.push(makeMarker([e.lon as number, e.lat as number], SEV_COLORS[e.severity] ?? "#888", "●", popupHtml(e)));
     }
   }
 
-  // threat zones — category-driven overlay symbols
   const zoneFilter: Array<[keyof Map2dOptions, (e: ThreatEvent) => boolean, string]> = [
     ["ransomware", (e) => e.category === "ransomware", "ransomware"],
     ["apt", (e) => !!e.actor, "apt"],
@@ -87,66 +124,87 @@ export function updateMap2d(events: ThreatEvent[], opts: Map2dOptions): void {
     if (!opts[key]) continue;
     const style = ZONE_STYLE[zone];
     for (const e of withCoords.filter(filter).slice(0, 60)) {
-      const mk = L.marker([e.lat as number, e.lon as number], {
-        icon: L.divIcon({
-          className: "map2d-zone",
-          html: `<span style="color:${style.color}">${style.glyph}</span>`,
-          iconSize: [14, 14],
-        }),
-      });
-      mk.bindPopup(popupHtml(e));
-      mk.addTo(map!);
-      markers.push(mk);
+      markerLayers.push(makeMarker([e.lon as number, e.lat as number], style.color, style.glyph, popupHtml(e)));
     }
   }
 
-  if (opts.rings) {
-    // pulsing-style highlight rings around critical/high hotspots
-    for (const e of withCoords.filter((x) => x.severity === "critical" || x.severity === "high")) {
-      const ring = L.circle([e.lat as number, e.lon as number], {
-        radius: 90000,
-        color: e.severity === "critical" ? "#ff3333" : "#ffaa00",
-        weight: 1,
-        fill: false,
-        opacity: 0.45,
-        dashArray: "3 5",
-      });
-      ring.addTo(map!);
-      markers.push(ring);
-    }
+  // rings — dashed circles around critical/high
+  const m = map;
+  if (opts.rings && m.getSource(ringSourceId)) {
+    const ringFeatures: GeoFeature[] = withCoords
+      .filter((x) => x.severity === "critical" || x.severity === "high")
+      .slice(0, 40)
+      .map((e) => ({
+        type: "Feature" as const,
+        properties: { color: e.severity === "critical" ? "#ff3333" : "#ffaa00" },
+        geometry: circleGeoJSON([e.lon as number, e.lat as number], 1.4),
+      }));
+    (m.getSource(ringSourceId) as maplibregl.GeoJSONSource).setData({
+      type: "FeatureCollection",
+      features: ringFeatures,
+    });
+  } else if (m.getSource(ringSourceId)) {
+    (m.getSource(ringSourceId) as maplibregl.GeoJSONSource).setData({ type: "FeatureCollection", features: [] });
   }
 
-  if (opts.arcs) {
+  // arcs — campaign polylines
+  if (opts.arcs && m.getSource(arcSourceId)) {
     const pairs = computePairs(withCoords);
-    for (const p of pairs.slice(0, 40)) {
-      const line = L.polyline(p, { color: "rgba(56,189,248,0.55)", weight: 1.2, dashArray: "4 6", opacity: 0.7 }).addTo(map!);
-      arcLines.push(line);
-    }
+    const features: GeoFeature[] = pairs.slice(0, 40).map((pts) => ({
+      type: "Feature" as const,
+      properties: {},
+      geometry: { type: "LineString" as const, coordinates: pts },
+    }));
+    (m.getSource(arcSourceId) as maplibregl.GeoJSONSource).setData({
+      type: "FeatureCollection",
+      features,
+    });
+  } else if (m.getSource(arcSourceId)) {
+    (m.getSource(arcSourceId) as maplibregl.GeoJSONSource).setData({ type: "FeatureCollection", features: [] });
   }
 
+  // labels — country text markers
   if (opts.labels) {
     const seen = new Set<string>();
     for (const e of withCoords) {
       if (!e.country || seen.has(e.country)) continue;
       seen.add(e.country);
-      const mk = L.marker([e.lat as number, e.lon as number], {
-        icon: L.divIcon({
-          className: "map2d-label",
-          html: `<span>${e.country}</span>`,
-          iconSize: [60, 14],
-        }),
-      });
-      mk.addTo(map!);
-      labelMarkers.push(mk);
+      markerLayers.push(makeLabel([e.lon as number, e.lat as number], e.country));
     }
   }
 }
 
 export function resizeMap2d(): void {
-  map?.invalidateSize();
+  map?.resize();
 }
 
-/** geodesic-ish arc between same-actor/category country pairs */
+function makeMarker(lngLat: [number, number], color: string, glyph: string, popup: string): maplibregl.Marker {
+  const el = document.createElement("div");
+  el.className = "map2d-marker";
+  el.innerHTML = `<span style="color:${color}">${glyph}</span>`;
+  const mk = new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat(lngLat).addTo(map!);
+  if (popup) mk.setPopup(new maplibregl.Popup({ offset: 12, closeButton: false }).setHTML(popup));
+  return mk;
+}
+
+function makeLabel(lngLat: [number, number], text: string): maplibregl.Marker {
+  const el = document.createElement("div");
+  el.className = "map2d-label";
+  el.innerHTML = `<span>${text}</span>`;
+  return new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat(lngLat).addTo(map!);
+}
+
+/** approximate circle polygon in lon/lat degrees (radiusDeg ~ 1.2 ≈ 130km) */
+function circleGeoJSON(center: [number, number], radiusDeg: number): { type: "Polygon"; coordinates: Array<Array<[number, number]>> } {
+  const pts: Array<[number, number]> = [];
+  const steps = 40;
+  for (let i = 0; i <= steps; i++) {
+    const a = (i / steps) * Math.PI * 2;
+    pts.push([center[0] + Math.cos(a) * radiusDeg, center[1] + Math.sin(a) * radiusDeg * 0.6]);
+  }
+  return { type: "Polygon", coordinates: [pts] };
+}
+
 function computePairs(events: ThreatEvent[]): Array<[number, number][]> {
   const out: Array<[number, number][]> = [];
   const pushChain = (evs: ThreatEvent[]) => {
@@ -158,11 +216,11 @@ function computePairs(events: ThreatEvent[]): Array<[number, number][]> {
       const a = list[i];
       const b = list[i + 1];
       if (a.lat == null || a.lon == null || b.lat == null || b.lon == null) continue;
-      const mid: [number, number] = [(a.lat + b.lat) / 2, (a.lon + b.lon) / 2];
+      const mid: [number, number] = [(a.lon + b.lon) / 2, (a.lat + b.lat) / 2 + 4];
       out.push([
-        [a.lat, a.lon],
-        [mid[0] + 4, mid[1]],
-        [b.lat, b.lon],
+        [a.lon, a.lat],
+        [mid[0], mid[1]],
+        [b.lon, b.lat],
       ]);
     }
   };
