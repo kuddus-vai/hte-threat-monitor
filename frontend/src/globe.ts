@@ -9,6 +9,17 @@ let globe: GlobeInstance | null = null;
 export async function initGlobe(el: HTMLElement): Promise<GlobeInstance> {
   // dynamic import keeps the ~2MB three.js bundle out of the initial chunk
   const { default: Globe } = await import("globe.gl");
+  // WebGL guard — never silently blank: show a visible fallback message
+  try {
+    const test = document.createElement("canvas");
+    const gl = test.getContext("webgl2") ?? test.getContext("webgl");
+    if (!gl) throw new Error("WebGL unavailable");
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+  } catch {
+    el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#8899aa;font-size:14px;text-align:center;padding:20px">
+      🌐 3D globe unavailable (WebGL off).<br/>Event list is still live in the sidebar →</div>`;
+    throw new Error("WebGL unavailable");
+  }
   const topology = worldAtlas as unknown as { objects: { countries: never } };
   const countries = feature(topology, topology.objects.countries);
 
