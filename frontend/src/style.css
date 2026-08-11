@@ -58,7 +58,7 @@ body {
 
 /* ── services modal (mother site) ─────────────── */
 .modal { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; }
-.modal.hidden { display: none; }
+.modal.hidden, .hidden { display: none !important; }
 .modal-backdrop { position: absolute; inset: 0; background: rgba(2, 6, 16, 0.78); backdrop-filter: blur(6px); }
 .modal-card {
   position: relative;
