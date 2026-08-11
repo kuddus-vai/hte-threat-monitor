@@ -25,7 +25,7 @@ export interface Env {
   TELEGRAM_CHAT_ID?: string;
 }
 
-type Handler = (req: Request, env: { corsOrigin: string; cacheKind: string }) => Promise<Response>;
+type Handler = (req: Request, env: { corsOrigin: string; cacheKind: string }, shell?: Response) => Promise<Response>;
 
 interface Handlers {
   handleThreats: Handler;
@@ -36,6 +36,7 @@ interface Handlers {
   handleSummary: Handler;
   handleArticle: Handler;
   handleSitemap: Handler;
+  handleArticlePage: Handler;
 }
 
 let handlersPromise: Promise<Handlers> | null = null;
@@ -104,6 +105,17 @@ export default {
     // article route: /api/article/<id>
     if (url.pathname.startsWith("/api/article/")) {
       return handlers.handleArticle(request, ctx);
+    }
+
+    // crawlable article page: /article/<id> — serve SPA shell with SEO meta
+    if (url.pathname.startsWith("/article/")) {
+      const assets = (e as unknown as { ASSETS?: { fetch: (req: Request) => Promise<Response> } }).ASSETS;
+      // shell = the dashboard index.html; enrich with article meta for crawlers
+      const shell = assets ? await assets.fetch(new Request(`${url.origin}/`, request)) : new Response("", { status: 404 });
+      if (shell.ok) {
+        return handlers.handleArticlePage(request, ctx, shell);
+      }
+      return shell;
     }
 
     // Static dashboard assets (frontend/dist) served from the same origin.

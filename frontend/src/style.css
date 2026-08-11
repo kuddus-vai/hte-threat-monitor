@@ -105,8 +105,17 @@ body {
 
 /* ── tactical grid overlay on globe ───────── */
 #globe { position: relative; }
-#globe.grid-on::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+#map2d { position: absolute; inset: 0; z-index: 1; background: #0b0d10; }
+#map2d .map2d-label span {
+  color: rgba(0, 255, 65, 0.9); font-size: 10px; font-family: monospace;
+  text-shadow: 0 0 4px #000; white-space: nowrap;
+  background: rgba(0, 0, 0, 0.45); padding: 1px 4px; border-radius: 3px;
+}
+.leaflet-container { background: #0b0d10; }
+.leaflet-control-attribution { background: rgba(0,0,0,0.6) !important; color: #4b5563 !important; font-size: 9px !important; }
+.leaflet-control-attribution a { color: #38bdf8 !important; }
+#globe.grid-on::after, #map2d.grid-on::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 500;
   background:
     linear-gradient(rgba(0,255,65,0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(0,255,65,0.05) 1px, transparent 1px);

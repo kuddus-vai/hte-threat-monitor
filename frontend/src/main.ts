@@ -1,6 +1,7 @@
 import "./style.css";
 import type { ThreatEvent, ThreatFeed, TrendPoint } from "../../backend/src/types";
 import { initGlobe, updateGlobe, setGlobeMode, setLayer } from "./globe";
+import { initMap2d, updateMap2d, resizeMap2d } from "./map2d";
 import { SEV_COLORS, fetchFeed, fetchHealth, fmtDate, fmtTime } from "./api";
 import { renderAdSlot } from "./ads";
 
@@ -17,6 +18,41 @@ let searchQuery = "";
 initGlobe($("#globe")).catch((err) => {
   console.error("globe init failed:", err);
 });
+
+// ── map mode: 2D (default, Leaflet) vs 3D (globe.gl) ─────
+let mapMode3D = false;
+function setMapMode(threeD: boolean): void {
+  mapMode3D = threeD;
+  const globeEl = $("#globe");
+  const mapEl = $("#map2d");
+  if (threeD) {
+    mapEl.classList.add("hidden");
+    globeEl.classList.remove("hidden");
+    setGlobeMode(true);
+    resizeGlobe();
+  } else {
+    globeEl.classList.add("hidden");
+    mapEl.classList.remove("hidden");
+    if (!mapEl.dataset.ready) {
+      initMap2d(mapEl);
+      mapEl.dataset.ready = "1";
+    }
+    resizeMap2d();
+    updateMap2d(filteredEvents(), {
+      points: layerState.points,
+      arcs: layerState.arcs,
+      labels: layerState.labels,
+    });
+  }
+}
+let layerState = { points: true, arcs: true, rings: true, labels: true };
+function resizeGlobe(): void {
+  // re-fit the 3D globe after its container becomes visible
+  setTimeout(() => {
+    const g = (globalThis as unknown as { __globeResize?: () => void }).__globeResize;
+    g?.();
+  }, 50);
+}
 
 // ── unified filter pipeline ──────────────────────────────
 function filteredEvents(): ThreatEvent[] {
@@ -97,7 +133,11 @@ function renderAll(): void {
   renderTicker();
   renderCountryChips();
   renderOutages();
-  updateGlobe(filteredEvents());
+  if (mapMode3D) {
+    updateGlobe(filteredEvents());
+  } else {
+    updateMap2d(filteredEvents(), { points: layerState.points, arcs: layerState.arcs, labels: layerState.labels });
+  }
 }
 
 function renderFeed(): void {
@@ -340,36 +380,43 @@ function bindFilters(): void {
 
   // Phase 5: globe 2D/3D + layer toggles
   $("#toggle-3d").addEventListener("click", () => {
-    setGlobeMode(true);
+    setMapMode(true);
     $("#toggle-3d").classList.add("active");
     $("#toggle-2d").classList.remove("active");
   });
   $("#toggle-2d").addEventListener("click", () => {
-    setGlobeMode(false);
+    setMapMode(false);
     $("#toggle-2d").classList.add("active");
     $("#toggle-3d").classList.remove("active");
   });
+  const syncLayers = (name: keyof typeof layerState) => {
+    layerState[name] = !layerState[name];
+    if (mapMode3D) {
+      setLayer(name, layerState[name]);
+    } else {
+      updateMap2d(filteredEvents(), { points: layerState.points, arcs: layerState.arcs, labels: layerState.labels });
+    }
+  };
   $("#layer-points").addEventListener("click", (ev) => {
-    const b = ev.target as HTMLButtonElement;
-    b.classList.toggle("active");
-    setLayer("points", b.classList.contains("active"));
+    (ev.target as HTMLButtonElement).classList.toggle("active");
+    syncLayers("points");
   });
   $("#layer-arcs").addEventListener("click", (ev) => {
-    const b = ev.target as HTMLButtonElement;
-    b.classList.toggle("active");
-    setLayer("arcs", b.classList.contains("active"));
+    (ev.target as HTMLButtonElement).classList.toggle("active");
+    syncLayers("arcs");
   });
   $("#layer-rings").addEventListener("click", (ev) => {
-    const b = ev.target as HTMLButtonElement;
-    b.classList.toggle("active");
-    setLayer("rings", b.classList.contains("active"));
+    (ev.target as HTMLButtonElement).classList.toggle("active");
+    syncLayers("rings");
   });
 
   // Phase 5.5: checkbox layers panel
   const bindLayerChk = (sel: string, name: "points" | "arcs" | "rings" | "labels") => {
     $(sel).addEventListener("change", (ev) => {
       const on = (ev.target as HTMLInputElement).checked;
-      setLayer(name, on);
+      layerState[name] = on;
+      if (mapMode3D) setLayer(name, on);
+      else updateMap2d(filteredEvents(), { points: layerState.points, arcs: layerState.arcs, labels: layerState.labels });
     });
   };
   bindLayerChk("#ly-points", "points");
@@ -425,7 +472,8 @@ async function refresh(): Promise<void> {
   try {
     feed = await fetchFeed();
     const events = filteredEvents();
-    updateGlobe(events);
+    if (mapMode3D) updateGlobe(events);
+    else updateMap2d(events, { points: layerState.points, arcs: layerState.arcs, labels: layerState.labels });
     renderFeed();
     renderStats();
     renderTicker();
@@ -488,7 +536,8 @@ interface ArticlePayload {
 
 function showDashboard(): void {
   $("#article-view").classList.add("hidden");
-  $("#globe").classList.remove("hidden");
+  $("#globe").classList.toggle("hidden", !mapMode3D);
+  $("#map2d").classList.toggle("hidden", mapMode3D);
   $("#topbar").classList.remove("hidden");
   $("#sidebar").classList.remove("hidden");
   $("#ticker").classList.remove("hidden");
@@ -499,6 +548,7 @@ function showDashboard(): void {
 async function showArticle(id: string): Promise<void> {
   // hide chrome, show article shell
   $("#globe").classList.add("hidden");
+  $("#map2d").classList.add("hidden");
   $("#topbar").classList.add("hidden");
   $("#sidebar").classList.add("hidden");
   $("#ticker").classList.add("hidden");
@@ -600,12 +650,19 @@ async function showArticle(id: string): Promise<void> {
 }
 
 function route(): void {
-  const m = location.hash.match(/^#\/article\/(.+)$/);
+  // SEO-friendly path (/article/:id) OR hash (#/article/:id)
+  const pathMatch = location.pathname.match(/^\/article\/(.+)$/);
+  const hashMatch = location.hash.match(/^#\/article\/(.+)$/);
+  const m = pathMatch ?? hashMatch;
   if (m) {
     void showArticle(decodeURIComponent(m[1]));
   } else {
     showDashboard();
     document.title = "HTE Cyber Threat & Tech Monitor";
+    // normalize back to the dashboard root (clear any /article/ path)
+    if (/^\/article\//.test(location.pathname)) {
+      history.replaceState({}, "", "/");
+    }
   }
 }
 
@@ -617,6 +674,7 @@ $("#article-map").addEventListener("click", () => {
   location.hash = "#/";
 });
 void route();
+setMapMode(false); // 2D tactical map is the default view
 
 void refresh();
 void checkHealth();

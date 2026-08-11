@@ -164,7 +164,7 @@ export async function getArticle(
 export async function sitemapUrls(base: string): Promise<string[]> {
   const feed = await cache.get();
   const events = feed?.events ?? [];
-  const urls = events.map((e) => `${base}/#/article/${encodeURIComponent(e.id)}`);
+  const urls = events.map((e) => `${base}/article/${encodeURIComponent(e.id)}`);
   urls.unshift(`${base}/`);
   return urls.slice(0, 500);
 }

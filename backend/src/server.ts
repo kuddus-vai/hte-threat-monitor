@@ -125,7 +125,7 @@ export async function handleArticle(req: Request, env: Env): Promise<Response> {
   return json(article, 200, env);
 }
 
-/** GET /sitemap.xml — SEO sitemap of article pages. */
+/** GET /sitemap.xml — SEO sitemap of article pages (real crawlable URLs). */
 export async function handleSitemap(req: Request, env: Env): Promise<Response> {
   const url = new URL(req.url);
   const base = `${url.protocol}//${url.host}`;
@@ -140,6 +140,56 @@ ${urls.map((u) => `  <url><loc>${u}</loc></url>`).join("\n")}
   });
 }
 
+/** GET /article/:id — crawlable HTML page with SEO meta + JSON-LD injected.
+ *  The SPA hydrates and shows the article; crawlers read the meta directly. */
+export async function handleArticlePage(req: Request, env: Env, shell: Response): Promise<Response> {
+  const url = new URL(req.url);
+  const id = decodeURIComponent(url.pathname.split("/").pop() ?? "");
+  const html = await shell.text();
+
+  // try to enrich with article meta (best effort — fall back to plain shell)
+  let title = "HTE Cyber Threat & Tech Monitor";
+  let description = "Real-time global cyber threat & tech intelligence.";
+  let jsonLd = "";
+  try {
+    const feed = (await cache.get()) ?? emptyFeed();
+    const ev = feed.events.find((e) => e.id === id);
+    if (ev) {
+      const cached = await readCachedArticle(id);
+      const seoTitle = cached?.seoTitle ?? ev.title.slice(0, 70);
+      const desc = cached?.description ?? ev.summary.slice(0, 140);
+      title = `${seoTitle} | HTE Threat Monitor`;
+      description = desc;
+      jsonLd = `<script type="application/ld+json">${JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "NewsArticle",
+        headline: seoTitle,
+        description: desc,
+        datePublished: ev.publishedAt,
+        author: { "@type": "Organization", name: "High Tech Enterprise" },
+        publisher: { "@type": "Organization", name: "High Tech Enterprise" },
+        mainEntityOfPage: { "@type": "WebPage", "@id": `${url.origin}/article/${encodeURIComponent(id)}` },
+      })}</script>`;
+    }
+  } catch {
+    /* shell fallback */
+  }
+
+  const seeded = html
+    .replace(/<title>[^<]*<\/title>/, `<title>${escapeXml(title)}</title>`)
+    .replace(/<meta name="description"[^>]*>/, "")
+    .replace("</head>", `<meta name="description" content="${escapeXml(description)}" />\n  <meta name="robots" content="index, follow" />\n  <link rel="canonical" href="${url.origin}/article/${encodeURIComponent(id)}" />\n  ${jsonLd}\n  <script>history.replaceState({}, "", "/article/${encodeURIComponent(id)}");location.hash = "#/article/${encodeURIComponent(id)}";</script>\n  </head>`);
+
+  return new Response(seeded, {
+    status: 200,
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=300", ...corsHeaders(env) },
+  });
+}
+
+function escapeXml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);
+}
+
 function emptyFeed(): ThreatFeed {
   return { updatedAt: new Date().toISOString(), sourceCount: 0, total: 0, events: [] };
 }
@@ -149,6 +199,19 @@ type LocalRouter = { handle(req: Request): Promise<Response> };
 
 export function createDevServer(): LocalRouter {
   const env: Env = { corsOrigin: config.corsOrigin, cacheKind: cache.backendKind };
+  // local SPA shell for /article/:id (read the built index.html once)
+  let shellCache: Promise<string> | null = null;
+  const getShell = (): Promise<string> => {
+    shellCache ??= import("node:fs/promises").then((fs) =>
+      fs.readFile(new URL("../../frontend/dist/index.html", import.meta.url), "utf-8"),
+    );
+    return shellCache;
+  };
+  const handleArticlePageLocal = async (req: Request, e: Env): Promise<Response> => {
+    const html = await getShell();
+    const shell = new Response(html, { status: 200 });
+    return handleArticlePage(req, e, shell);
+  };
   const routes: Array<[RegExp, "GET" | "POST", (req: Request, e: Env) => Promise<Response>]> = [
     [/^\/api\/threats$/, "GET", handleThreats],
     [/^\/api\/refresh$/, "POST", handleRefresh],
@@ -158,6 +221,7 @@ export function createDevServer(): LocalRouter {
     [/^\/api\/summary$/, "GET", handleSummary],
     [/^\/api\/article\/.+$/, "GET", handleArticle],
     [/^\/sitemap\.xml$/, "GET", handleSitemap],
+    [/^\/article\/.+$/, "GET", (req: Request, e: Env) => handleArticlePageLocal(req, e)],
   ];
 
   return {

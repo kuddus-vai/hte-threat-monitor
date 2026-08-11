@@ -56,6 +56,14 @@ export async function initGlobe(el: HTMLElement): Promise<GlobeInstance> {
   resize();
   window.addEventListener("resize", resize);
 
+  // default to 2D orthographic (fov 0), no auto-rotate
+  const cam = (globe as unknown as { perspective: () => { fov: number; updateProjectionMatrix?: () => void } }).perspective();
+  if (cam) {
+    cam.fov = 0;
+    cam.updateProjectionMatrix?.();
+  }
+  globe.controls().autoRotate = false;
+
   return globe;
 }
 
@@ -100,7 +108,9 @@ export interface LayerState {
   labels: boolean;
 }
 const layers: LayerState = { points: true, arcs: true, rings: true, labels: true };
-let threeDMode = true;
+// 2D (orthographic) is the DEFAULT — World Monitor style flat tactical map.
+// 3D is opt-in via the toggle.
+let threeDMode = false;
 let lastEvents: ThreatEvent[] = [];
 
 export function setGlobeMode(threeD: boolean): void {
