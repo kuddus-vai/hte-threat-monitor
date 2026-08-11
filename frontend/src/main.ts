@@ -1,6 +1,6 @@
 import "./style.css";
 import type { ThreatEvent, ThreatFeed, TrendPoint } from "../../backend/src/types";
-import { initGlobe, updateGlobe } from "./globe";
+import { initGlobe, updateGlobe, setGlobeMode, setLayer } from "./globe";
 import { SEV_COLORS, fetchFeed, fetchHealth, fmtDate, fmtTime } from "./api";
 import { renderAdSlot } from "./ads";
 
@@ -10,6 +10,8 @@ let feed: ThreatFeed = { updatedAt: "", sourceCount: 0, total: 0, events: [] };
 let activeSev = "all";
 let activeCat = "all";
 let activeCountry = "";
+let activeHours = "all";
+let activeSource = "all";
 let searchQuery = "";
 
 initGlobe($("#globe")).catch((err) => {
@@ -22,6 +24,11 @@ function filteredEvents(): ThreatEvent[] {
     if (activeSev !== "all" && e.severity !== activeSev) return false;
     if (activeCat !== "all" && e.category !== activeCat) return false;
     if (activeCountry && e.country !== activeCountry) return false;
+    if (activeSource !== "all" && e.source !== activeSource) return false;
+    if (activeHours !== "all") {
+      const cutoff = Date.now() - Number(activeHours) * 3_600_000;
+      if (new Date(e.publishedAt).getTime() < cutoff) return false;
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const hay = `${e.title} ${e.summary} ${e.actor ?? ""} ${e.source} ${e.country ?? ""}`.toLowerCase();
@@ -31,7 +38,43 @@ function filteredEvents(): ThreatEvent[] {
   });
 }
 
+// ── DEFCON-style threat level (severity mix) ────────────
+function computeThreatLevel(): number {
+  const n = feed.events.length;
+  if (!n) return 5;
+  const crit = feed.events.filter((e) => e.severity === "critical").length;
+  const high = feed.events.filter((e) => e.severity === "high").length;
+  const ratio = (crit * 3 + high * 1.5) / n;
+  if (ratio >= 1.2 || crit >= 12) return 1;
+  if (ratio >= 0.8 || crit >= 6) return 2;
+  if (ratio >= 0.45 || crit >= 3) return 3;
+  if (crit >= 1 || high >= 5) return 4;
+  return 5;
+}
+const DEFCON_LABEL: Record<number, string> = {
+  1: "DEFCON 1 — CRITICAL",
+  2: "DEFCON 2 — SEVERE",
+  3: "DEFCON 3 — ELEVATED",
+  4: "DEFCON 4 — GUARDED",
+  5: "DEFCON 5 — NORMAL",
+};
+function renderThreatLevel(): void {
+  const el = $("#threat-level");
+  const lvl = computeThreatLevel();
+  el.textContent = `⚡ ${DEFCON_LABEL[lvl]}`;
+  el.className = `threat-level tl-${lvl}`;
+}
+
 // ── sidebar feed ─────────────────────────────────────────
+function renderAll(): void {
+  renderFeed();
+  renderStats();
+  renderTicker();
+  renderCountryChips();
+  renderOutages();
+  updateGlobe(filteredEvents());
+}
+
 function renderFeed(): void {
   const events = filteredEvents();
   const list = $("#feed-list");
@@ -249,6 +292,53 @@ function bindFilters(): void {
   });
 
   $("#export-btn").addEventListener("click", exportCsv);
+
+  // Phase 5: time range filters
+  $("#time-row").addEventListener("click", (ev) => {
+    const btn = (ev.target as HTMLElement).closest(".tbtn") as HTMLButtonElement | null;
+    if (!btn) return;
+    document.querySelectorAll(".tbtn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeHours = btn.dataset.hours ?? "all";
+    renderAll();
+  });
+
+  // Phase 5: source tabs (LIVE NEWS style)
+  $("#source-tabs").addEventListener("click", (ev) => {
+    const btn = (ev.target as HTMLElement).closest(".stab") as HTMLButtonElement | null;
+    if (!btn) return;
+    document.querySelectorAll(".stab").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeSource = btn.dataset.source ?? "all";
+    renderAll();
+  });
+
+  // Phase 5: globe 2D/3D + layer toggles
+  $("#toggle-3d").addEventListener("click", () => {
+    setGlobeMode(true);
+    $("#toggle-3d").classList.add("active");
+    $("#toggle-2d").classList.remove("active");
+  });
+  $("#toggle-2d").addEventListener("click", () => {
+    setGlobeMode(false);
+    $("#toggle-2d").classList.add("active");
+    $("#toggle-3d").classList.remove("active");
+  });
+  $("#layer-points").addEventListener("click", (ev) => {
+    const b = ev.target as HTMLButtonElement;
+    b.classList.toggle("active");
+    setLayer("points", b.classList.contains("active"));
+  });
+  $("#layer-arcs").addEventListener("click", (ev) => {
+    const b = ev.target as HTMLButtonElement;
+    b.classList.toggle("active");
+    setLayer("arcs", b.classList.contains("active"));
+  });
+  $("#layer-rings").addEventListener("click", (ev) => {
+    const b = ev.target as HTMLButtonElement;
+    b.classList.toggle("active");
+    setLayer("rings", b.classList.contains("active"));
+  });
 }
 
 function exportCsv(): void {
@@ -285,6 +375,9 @@ async function refresh(): Promise<void> {
     renderTicker();
     renderCountryChips();
     renderOutages();
+    renderThreatLevel();
+    const fs = $("#footer-status");
+    if (fs) fs.textContent = `${feed.sourceCount} sources · Upstash · ${feed.total} events tracked`;
     $("#updated-at").textContent = `UPDATED ${fmtDate(feed.updatedAt)} · ${feed.sourceCount} SOURCES`;
   } catch (err) {
     $("#status-text").textContent = `feed error: ${String(err)}`;
@@ -343,6 +436,7 @@ function showDashboard(): void {
   $("#sidebar").classList.remove("hidden");
   $("#ticker").classList.remove("hidden");
   $("#legend").classList.remove("hidden");
+  $("#app-footer").classList.remove("hidden");
 }
 
 async function showArticle(id: string): Promise<void> {
@@ -352,6 +446,7 @@ async function showArticle(id: string): Promise<void> {
   $("#sidebar").classList.add("hidden");
   $("#ticker").classList.add("hidden");
   $("#legend").classList.add("hidden");
+  $("#app-footer").classList.add("hidden");
   const view = $("#article-view");
   view.classList.remove("hidden");
   view.scrollTop = 0;

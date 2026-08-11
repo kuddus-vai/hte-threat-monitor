@@ -60,12 +60,38 @@ export async function initGlobe(el: HTMLElement): Promise<GlobeInstance> {
 
 export function updateGlobe(events: ThreatEvent[]): void {
   if (!globe) return;
+  lastEvents = events;
   const withCoords = events.filter((e) => e.lat !== undefined && e.lon !== undefined);
-  globe.pointsData(withCoords);
-  globe.ringsData(
-    withCoords.filter((e) => e.severity === "critical" || e.severity === "high").slice(0, 60),
-  );
-  updateArcs(withCoords);
+  if (layers.points) globe.pointsData(withCoords);
+  if (layers.rings) {
+    globe.ringsData(
+      withCoords.filter((e) => e.severity === "critical" || e.severity === "high"),
+    );
+  }
+  if (layers.arcs) {
+    updateArcs(events);
+  } else {
+    globe.arcsData([]);
+  }
+}
+
+// ── Phase 5: view mode + layer visibility ────────────────
+const layers = { points: true, arcs: true, rings: true };
+let threeDMode = true;
+let lastEvents: ThreatEvent[] = [];
+
+export function setGlobeMode(threeD: boolean): void {
+  threeDMode = threeD;
+  if (!globe) return;
+  // globe.gl exposes .perspective() → THREE.PerspectiveCamera
+  const cam = (globe as unknown as { perspective: () => { fov: number } }).perspective();
+  if (cam) cam.fov = threeD ? 60 : 0; // 0 fov = orthographic (2D)
+  globe.controls().autoRotate = threeD;
+}
+
+export function setLayer(name: keyof typeof layers, on: boolean): void {
+  layers[name] = on;
+  updateGlobe(lastEvents);
 }
 
 /** Arc pairs: same actor (or same category) active in 2+ countries → campaign trail. */
