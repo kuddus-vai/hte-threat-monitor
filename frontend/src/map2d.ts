@@ -45,6 +45,23 @@ const ZONE_STYLE: Record<string, { color: string; glyph: string }> = {
   critical: { color: "#ff5555", glyph: "◎" },
 };
 
+// fixed per-zone offsets (degrees) — spreads the stack into a flower pattern
+const ZONE_OFFSET: Record<string, [number, number]> = {
+  ransomware: [0.45, 0.0],
+  apt: [-0.45, 0.0],
+  breach: [0.0, 0.45],
+  vuln: [0.0, -0.45],
+  outage: [0.45, 0.45],
+  critical: [-0.45, -0.45],
+};
+
+// deterministic jitter from event id so same-zone duplicates in one country spread too
+function idJitter(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return ((h % 1000) / 1000 - 0.5) * 0.5;
+}
+
 export function initMap2d(el: HTMLElement): void {
   if (map) return;
   map = new maplibregl.Map({
@@ -108,7 +125,11 @@ export function updateMap2d(events: ThreatEvent[], opts: Map2dOptions): void {
 
   if (opts.points) {
     for (const e of withCoords.slice(0, 150)) {
-      markerLayers.push(makeMarker([e.lon as number, e.lat as number], SEV_COLORS[e.severity] ?? "#888", "●", popupHtml(e)));
+      const jx = idJitter(e.id) * 0.7;
+      const jy = idJitter(e.id + "p") * 0.7;
+      markerLayers.push(
+        makeMarker([e.lon! + jx, e.lat! + jy], SEV_COLORS[e.severity] ?? "#888", "●", popupHtml(e)),
+      );
     }
   }
 
@@ -123,8 +144,18 @@ export function updateMap2d(events: ThreatEvent[], opts: Map2dOptions): void {
   for (const [key, filter, zone] of zoneFilter) {
     if (!opts[key]) continue;
     const style = ZONE_STYLE[zone];
+    const off = ZONE_OFFSET[zone] ?? [0, 0];
     for (const e of withCoords.filter(filter).slice(0, 60)) {
-      markerLayers.push(makeMarker([e.lon as number, e.lat as number], style.color, style.glyph, popupHtml(e)));
+      const jx = idJitter(e.id);
+      const jy = idJitter(e.id + "y");
+      markerLayers.push(
+        makeMarker(
+          [e.lon! + off[0] + jx, e.lat! + off[1] + jy],
+          style.color,
+          style.glyph,
+          popupHtml(e),
+        ),
+      );
     }
   }
 
