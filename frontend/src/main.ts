@@ -426,6 +426,7 @@ function bindFilters(): void {
   $("#ly-grid").addEventListener("change", (ev) => {
     const on = (ev.target as HTMLInputElement).checked;
     $("#globe").classList.toggle("grid-on", on);
+    $("#map2d").classList.toggle("grid-on", on);
   });
 
   // Phase 5.5: share + fullscreen
@@ -483,6 +484,20 @@ async function refresh(): Promise<void> {
     renderTrendBadge();
     const fs = $("#footer-status");
     if (fs) fs.textContent = `${feed.sourceCount} sources · Upstash · ${feed.total} events tracked`;
+    const st = $("#status-stats");
+    if (st) {
+      const crit = feed.events.filter((e) => e.severity === "critical").length;
+      const high = feed.events.filter((e) => e.severity === "high").length;
+      const med = feed.events.filter((e) => e.severity === "medium").length;
+      const low = feed.events.filter((e) => e.severity === "low").length;
+      st.textContent = `${crit} critical · ${high} high · ${med} medium · ${low} low`;
+    }
+    const leftCounts: Record<string, string> = { "#st-crit-lp": "critical", "#st-high-lp": "high", "#st-med-lp": "medium", "#st-low-lp": "low" };
+    for (const [sel, sev] of Object.entries(leftCounts)) {
+      const el = $(sel);
+      if (el) el.textContent = String(feed.events.filter((e) => e.severity === sev).length);
+    }
+    $(".sh-time").textContent = new Date().toUTCString().replace("GMT", "UTC");
     $("#updated-at").textContent = `UPDATED ${fmtDate(feed.updatedAt)} · ${feed.sourceCount} SOURCES`;
   } catch (err) {
     $("#status-text").textContent = `feed error: ${String(err)}`;
@@ -539,6 +554,8 @@ function showDashboard(): void {
   $("#globe").classList.toggle("hidden", !mapMode3D);
   $("#map2d").classList.toggle("hidden", mapMode3D);
   $("#topbar").classList.remove("hidden");
+  $("#sub-header").classList.remove("hidden");
+  $("#left-panel").classList.remove("hidden");
   $("#sidebar").classList.remove("hidden");
   $("#ticker").classList.remove("hidden");
   $("#legend").classList.remove("hidden");
@@ -550,6 +567,8 @@ async function showArticle(id: string): Promise<void> {
   $("#globe").classList.add("hidden");
   $("#map2d").classList.add("hidden");
   $("#topbar").classList.add("hidden");
+  $("#sub-header").classList.add("hidden");
+  $("#left-panel").classList.add("hidden");
   $("#sidebar").classList.add("hidden");
   $("#ticker").classList.add("hidden");
   $("#legend").classList.add("hidden");

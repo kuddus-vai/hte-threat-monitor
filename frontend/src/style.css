@@ -122,6 +122,46 @@ body {
   background-size: 44px 44px;
 }
 
+/* ── sub-header (World Monitor style) ─────── */
+#sub-header {
+  position: absolute; top: 64px; left: 0; right: 0; z-index: 11;
+  display: flex; align-items: center; gap: 14px;
+  padding: 6px 16px;
+  background: rgba(11, 13, 16, 0.85); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.72rem;
+}
+.sh-title { color: var(--accent); font-weight: 800; letter-spacing: 2px; font-size: 0.7rem; }
+.sh-time { color: var(--dim); font-family: ui-monospace, monospace; font-size: 0.66rem; }
+.sh-spacer { flex: 1; }
+#sub-header .time-row { padding: 0; }
+#sub-header .globe-ctl { margin-left: 0; }
+
+/* ── left layers panel (World Monitor style) ─ */
+#left-panel {
+  position: absolute; top: 110px; left: 16px; bottom: 52px; z-index: 10;
+  width: 190px; display: flex; flex-direction: column;
+  background: rgba(13, 15, 20, 0.92); backdrop-filter: blur(10px);
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 10px 12px; overflow-y: auto;
+}
+.lp-head { font-size: 0.66rem; color: var(--accent); letter-spacing: 1.5px; font-weight: 800; margin-bottom: 8px; }
+.lp-head.small { margin-top: 2px; margin-bottom: 6px; opacity: 0.8; }
+.lp-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 4px; cursor: pointer;
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 1px; color: var(--dim);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: color 0.15s; user-select: none;
+}
+.lp-item:hover { color: var(--text); }
+.lp-item input { margin-left: auto; accent-color: #38bdf8; }
+.lp-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; box-shadow: 0 0 6px currentColor; }
+.lp-sep { height: 1px; background: var(--border); margin: 8px 0; }
+.lp-sev { display: flex; flex-direction: column; gap: 4px; }
+.lp-sev-item { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.5px; display: flex; justify-content: space-between; }
+.lp-sev-item b { color: var(--text); }
+
 /* ── services modal (mother site) ─────────────── */
 .modal { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; }
 .modal.hidden, .hidden { display: none !important; }
@@ -182,7 +222,7 @@ body {
 
 /* ── sidebar ─────────────────────────────── */
 #sidebar {
-  position: absolute; top: 64px; right: 16px; bottom: 52px; z-index: 10;
+  position: absolute; top: 110px; right: 16px; bottom: 52px; z-index: 10;
   width: 360px; display: flex; flex-direction: column;
   background: var(--panel);
   border: 1px solid var(--border);

@@ -32,21 +32,48 @@
         </div>
       </header>
 
+      <div id="sub-header">
+        <span class="sh-title">GLOBAL SITUATION</span>
+        <span class="sh-time" id="sh-time">—</span>
+        <span class="sh-spacer"></span>
+        <div class="time-row" id="time-row">
+          <button class="tbtn active" data-hours="all">ALL</button>
+          <button class="tbtn" data-hours="1">1H</button>
+          <button class="tbtn" data-hours="6">6H</button>
+          <button class="tbtn" data-hours="24">24H</button>
+          <button class="tbtn" data-hours="168">7D</button>
+        </div>
+        <span class="globe-ctl">
+          <button id="toggle-3d" class="gbtn" title="3D view">3D</button>
+          <button id="toggle-2d" class="gbtn active" title="2D view">2D</button>
+          <span class="gsep"></span>
+          <button id="layer-points" class="gbtn active" title="Toggle event points">◉</button>
+          <button id="layer-arcs" class="gbtn active" title="Toggle campaign arcs">⌁</button>
+          <button id="layer-rings" class="gbtn active" title="Toggle alert rings">◎</button>
+        </span>
+      </div>
+
+      <aside id="left-panel">
+        <div class="lp-head">MAP LAYERS</div>
+        <label class="lp-item"><span class="lp-dot" style="background:#00ff41"></span>HOTSPOTS<input type="checkbox" id="ly-points" checked /></label>
+        <label class="lp-item"><span class="lp-dot" style="background:#38bdf8"></span>CAMPAIGN ARCS<input type="checkbox" id="ly-arcs" checked /></label>
+        <label class="lp-item"><span class="lp-dot" style="background:#ff3333"></span>ALERT RINGS<input type="checkbox" id="ly-rings" checked /></label>
+        <label class="lp-item"><span class="lp-dot" style="background:#ffaa00"></span>COUNTRY LABELS<input type="checkbox" id="ly-labels" checked /></label>
+        <label class="lp-item"><span class="lp-dot" style="background:#94a3b8"></span>TACTICAL GRID<input type="checkbox" id="ly-grid" checked /></label>
+        <div class="lp-sep"></div>
+        <div class="lp-head small">SEVERITY</div>
+        <div class="lp-sev">
+          <span class="lp-sev-item" style="color:#ff3333">■ CRIT <b id="st-crit-lp">0</b></span>
+          <span class="lp-sev-item" style="color:#ffaa00">■ HIGH <b id="st-high-lp">0</b></span>
+          <span class="lp-sev-item" style="color:#eab308">■ MED <b id="st-med-lp">0</b></span>
+          <span class="lp-sev-item" style="color:#22c55e">■ LOW <b id="st-low-lp">0</b></span>
+        </div>
+      </aside>
+
       <aside id="sidebar">
         <div class="panel-head">
           <h2>INTEL FEED</h2>
           <span id="feed-count" class="badge">0</span>
-        </div>
-
-        <div class="layers-panel" id="layers-panel">
-          <div class="layers-head">MAP LAYERS <span class="trend-sub">toggle overlays</span></div>
-          <div class="layers-row">
-            <label class="lchip"><input type="checkbox" id="ly-points" checked><span class="lsw"></span>◉ HOTSPOTS</label>
-            <label class="lchip"><input type="checkbox" id="ly-arcs" checked><span class="lsw"></span>⌁ ARCS</label>
-            <label class="lchip"><input type="checkbox" id="ly-rings" checked><span class="lsw"></span>◎ RINGS</label>
-            <label class="lchip"><input type="checkbox" id="ly-labels" checked><span class="lsw"></span>Ⓐ LABELS</label>
-            <label class="lchip"><input type="checkbox" id="ly-grid" checked><span class="lsw"></span>▒ GRID</label>
-          </div>
         </div>
 
         <div id="summary-card" class="summary-card hidden">
@@ -62,14 +89,6 @@
           <button class="fbtn high" data-sev="high">HIGH</button>
           <button class="fbtn med" data-sev="medium">MED</button>
           <button class="fbtn low" data-sev="low">LOW</button>
-        </div>
-
-        <div class="time-row" id="time-row">
-          <button class="tbtn active" data-hours="all">ALL</button>
-          <button class="tbtn" data-hours="1">1H</button>
-          <button class="tbtn" data-hours="6">6H</button>
-          <button class="tbtn" data-hours="24">24H</button>
-          <button class="tbtn" data-hours="168">7D</button>
         </div>
 
         <div class="search-row">
@@ -138,14 +157,6 @@
         <span class="lg high">● High</span>
         <span class="lg med">● Medium</span>
         <span class="lg low">● Low</span>
-        <span class="globe-ctl">
-          <button id="toggle-3d" class="gbtn" title="3D view">3D</button>
-          <button id="toggle-2d" class="gbtn active" title="2D view">2D</button>
-          <span class="gsep"></span>
-          <button id="layer-points" class="gbtn active" title="Toggle event points">◉</button>
-          <button id="layer-arcs" class="gbtn active" title="Toggle campaign arcs">⌁</button>
-          <button id="layer-rings" class="gbtn active" title="Toggle alert rings">◎</button>
-        </span>
       </div>
 
       <footer id="app-footer">
