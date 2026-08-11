@@ -21,10 +21,13 @@
         <div class="status">
           <button id="services-btn" class="services-btn">🏢 SERVICES</button>
           <span id="threat-level" class="threat-level" title="Computed from live severity mix">⚡ DEFCON 5</span>
+          <span id="trend-badge" class="trend-badge hidden" title="Critical trend: last 24h vs previous 24h">→ STABLE</span>
           <span id="status-dot" class="dot"></span>
           <span id="status-text">connecting…</span>
           <span class="sep">·</span>
           <span id="updated-at">—</span>
+          <button id="share-btn" class="icon-btn" title="Share current view">🔗</button>
+          <button id="fullscreen-btn" class="icon-btn" title="Fullscreen">⛶</button>
         </div>
       </header>
 
@@ -32,6 +35,17 @@
         <div class="panel-head">
           <h2>INTEL FEED</h2>
           <span id="feed-count" class="badge">0</span>
+        </div>
+
+        <div class="layers-panel" id="layers-panel">
+          <div class="layers-head">MAP LAYERS <span class="trend-sub">toggle overlays</span></div>
+          <div class="layers-row">
+            <label class="lchip"><input type="checkbox" id="ly-points" checked><span class="lsw"></span>◉ HOTSPOTS</label>
+            <label class="lchip"><input type="checkbox" id="ly-arcs" checked><span class="lsw"></span>⌁ ARCS</label>
+            <label class="lchip"><input type="checkbox" id="ly-rings" checked><span class="lsw"></span>◎ RINGS</label>
+            <label class="lchip"><input type="checkbox" id="ly-labels" checked><span class="lsw"></span>Ⓐ LABELS</label>
+            <label class="lchip"><input type="checkbox" id="ly-grid" checked><span class="lsw"></span>▒ GRID</label>
+          </div>
         </div>
 
         <div id="summary-card" class="summary-card hidden">

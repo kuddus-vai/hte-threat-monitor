@@ -71,6 +71,47 @@ body {
 .threat-level.tl-3 { background: rgba(234,179,8,0.15); border-color: #eab308; color: #fde047; }
 .threat-level.tl-4 { background: rgba(56,189,248,0.12); border-color: #38bdf8; color: #7dd3fc; }
 .threat-level.tl-5 { background: rgba(34,197,94,0.12); border-color: #22c55e; color: #86efac; }
+.trend-badge {
+  border-radius: 8px; padding: 4px 10px;
+  font-size: 0.68rem; font-weight: 800; letter-spacing: 0.5px;
+  border: 1px solid var(--border);
+}
+.trend-badge.tb-up { background: rgba(239,68,68,0.18); border-color: #ef4444; color: #fca5a5; }
+.trend-badge.tb-down { background: rgba(34,197,94,0.15); border-color: #22c55e; color: #86efac; }
+.trend-badge.tb-flat { background: rgba(148,163,184,0.12); border-color: #94a3b8; color: #cbd5e1; }
+.icon-btn {
+  cursor: pointer;
+  background: rgba(255,255,255,0.06); color: var(--dim);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 4px 9px; font-size: 0.72rem; transition: all 0.15s;
+}
+.icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ── map layers panel ─────────────────────── */
+.layers-panel { padding: 8px 14px 4px; border-bottom: 1px solid var(--border); }
+.layers-head { font-size: 0.66rem; color: var(--accent); letter-spacing: 1.5px; margin-bottom: 6px; }
+.layers-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.lchip {
+  display: inline-flex; align-items: center; gap: 5px;
+  cursor: pointer; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.5px;
+  color: var(--dim); padding: 3px 8px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 999px;
+  transition: all 0.15s; user-select: none;
+}
+.lchip:has(input:checked) { color: #7dd3fc; border-color: rgba(56,189,248,0.5); background: rgba(56,189,248,0.12); }
+.lchip input { display: none; }
+.lsw { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.15); }
+.lchip:has(input:checked) .lsw { background: #00ff41; box-shadow: 0 0 6px #00ff41; }
+
+/* ── tactical grid overlay on globe ───────── */
+#globe { position: relative; }
+#globe.grid-on::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  background:
+    linear-gradient(rgba(0,255,65,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,65,0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
 
 /* ── services modal (mother site) ─────────────── */
 .modal { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; }

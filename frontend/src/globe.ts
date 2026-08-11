@@ -26,12 +26,13 @@ export async function initGlobe(el: HTMLElement): Promise<GlobeInstance> {
   globe = new Globe(el, { animateIn: true })
     .backgroundColor("rgba(0,0,0,0)")
     .showAtmosphere(true)
-    .atmosphereColor("#38bdf8")
-    .atmosphereAltitude(0.16)
+    .atmosphereColor("#00ff41")
+    .atmosphereAltitude(0.18)
     .hexPolygonsData(countries.features as never[])
     .hexPolygonResolution(3)
-    .hexPolygonMargin(0.72)
-    .hexPolygonColor(() => "rgba(28, 48, 88, 0.5)")
+    .hexPolygonMargin(0.98)
+    .hexPolygonColor(() => "rgba(30, 48, 30, 0.55)")
+    .hexPolygonAltitude(0.004)
     .pointsData([])
     .pointLat("lat")
     .pointLng("lon")
@@ -73,10 +74,32 @@ export function updateGlobe(events: ThreatEvent[]): void {
   } else {
     globe.arcsData([]);
   }
+  if (layers.labels) {
+    const lbl = withCoords
+      .filter((e) => e.country)
+      .slice(0, 40)
+      .map((e) => ({ lat: e.lat as number, lng: e.lon as number, text: e.country as string }));
+    globe.labelsData(lbl);
+    globe.labelLat("lat");
+    globe.labelLng("lng");
+    globe.labelText("text");
+    globe.labelSize(0.7);
+    globe.labelDotRadius(0.25);
+    globe.labelColor(() => "rgba(0,255,65,0.9)");
+    globe.labelAltitude(0.02);
+  } else {
+    globe.labelsData([]);
+  }
 }
 
 // ── Phase 5: view mode + layer visibility ────────────────
-const layers = { points: true, arcs: true, rings: true };
+export interface LayerState {
+  points: boolean;
+  arcs: boolean;
+  rings: boolean;
+  labels: boolean;
+}
+const layers: LayerState = { points: true, arcs: true, rings: true, labels: true };
 let threeDMode = true;
 let lastEvents: ThreatEvent[] = [];
 

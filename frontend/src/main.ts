@@ -65,6 +65,31 @@ function renderThreatLevel(): void {
   el.className = `threat-level tl-${lvl}`;
 }
 
+// ── worsening / improving badge (critical: last 24h vs previous 24h) ──
+function renderTrendBadge(): void {
+  const now = Date.now();
+  const last24 = feed.events.filter((e) => {
+    const t = new Date(e.publishedAt).getTime();
+    return e.severity === "critical" && t >= now - 24 * 3_600_000;
+  }).length;
+  const prev24 = feed.events.filter((e) => {
+    const t = new Date(e.publishedAt).getTime();
+    return e.severity === "critical" && t >= now - 48 * 3_600_000 && t < now - 24 * 3_600_000;
+  }).length;
+  const badge = $("#trend-badge");
+  if (last24 > prev24) {
+    badge.textContent = `↑ WORSENING +${last24 - prev24}`;
+    badge.className = "trend-badge tb-up";
+  } else if (last24 < prev24) {
+    badge.textContent = `↓ IMPROVING -${prev24 - last24}`;
+    badge.className = "trend-badge tb-down";
+  } else {
+    badge.textContent = "→ STABLE";
+    badge.className = "trend-badge tb-flat";
+  }
+  badge.classList.remove("hidden");
+}
+
 // ── sidebar feed ─────────────────────────────────────────
 function renderAll(): void {
   renderFeed();
@@ -339,6 +364,37 @@ function bindFilters(): void {
     b.classList.toggle("active");
     setLayer("rings", b.classList.contains("active"));
   });
+
+  // Phase 5.5: checkbox layers panel
+  const bindLayerChk = (sel: string, name: "points" | "arcs" | "rings" | "labels") => {
+    $(sel).addEventListener("change", (ev) => {
+      const on = (ev.target as HTMLInputElement).checked;
+      setLayer(name, on);
+    });
+  };
+  bindLayerChk("#ly-points", "points");
+  bindLayerChk("#ly-arcs", "arcs");
+  bindLayerChk("#ly-rings", "rings");
+  bindLayerChk("#ly-labels", "labels");
+  $("#ly-grid").addEventListener("change", (ev) => {
+    const on = (ev.target as HTMLInputElement).checked;
+    $("#globe").classList.toggle("grid-on", on);
+  });
+
+  // Phase 5.5: share + fullscreen
+  $("#share-btn").addEventListener("click", () => {
+    const url = new URL(location.href);
+    url.hash = "#/";
+    void navigator.clipboard?.writeText(url.href).then(() => {
+      const b = $("#share-btn");
+      b.textContent = "✓";
+      setTimeout(() => (b.textContent = "🔗"), 1200);
+    });
+  });
+  $("#fullscreen-btn").addEventListener("click", () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void document.documentElement.requestFullscreen();
+  });
 }
 
 function exportCsv(): void {
@@ -376,6 +432,7 @@ async function refresh(): Promise<void> {
     renderCountryChips();
     renderOutages();
     renderThreatLevel();
+    renderTrendBadge();
     const fs = $("#footer-status");
     if (fs) fs.textContent = `${feed.sourceCount} sources · Upstash · ${feed.total} events tracked`;
     $("#updated-at").textContent = `UPDATED ${fmtDate(feed.updatedAt)} · ${feed.sourceCount} SOURCES`;
