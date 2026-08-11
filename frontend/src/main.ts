@@ -355,9 +355,31 @@ async function showArticle(id: string): Promise<void> {
   const view = $("#article-view");
   view.classList.remove("hidden");
   view.scrollTop = 0;
+  // immediate content from LOCAL feed data — never a blank shell, even offline
+  const localEvent = feed.events.find((e) => e.id === id);
+  if (localEvent) {
+    $("#a-sev").textContent = localEvent.severity;
+    $("#a-sev").className = `sev-pill ${localEvent.severity}`;
+    $("#a-cat").textContent = localEvent.category.replace("_", " ");
+    $("#a-source").textContent = localEvent.source;
+    $("#a-date").textContent = fmtDate(localEvent.publishedAt);
+    $("#a-title").textContent = localEvent.title.slice(0, 100);
+    $("#a-sub").textContent = localEvent.summary.slice(0, 160);
+    $("#a-body").innerHTML = `<p>${escapeHtml(localEvent.summary)}</p><p class="loading">⏳ Expanding briefing…</p>`;
+    $("#a-source-link").setAttribute("href", localEvent.url);
+  } else {
+    // event not in local feed — show loading placeholder while the API answers
+    $("#a-title").textContent = "Loading briefing…";
+    $("#a-sub").textContent = "Generating the report — one moment";
+    $("#a-body").innerHTML = "<p class=\"loading\">⏳ Building article…</p>";
+    $("#a-related").innerHTML = "";
+  }
 
   try {
-    const res = await fetch(`/api/article/${encodeURIComponent(id)}`);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 10_000); // never hang the shell
+    const res = await fetch(`/api/article/${encodeURIComponent(id)}`, { signal: ctrl.signal });
+    clearTimeout(timer);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const a = (await res.json()) as ArticlePayload;
 
@@ -401,8 +423,11 @@ async function showArticle(id: string): Promise<void> {
     document.head.appendChild(ld);
     document.title = `${a.seoTitle} | HTE Threat Monitor`;
   } catch (err) {
-    // Event aged out of the feed → never dead-end: show recent reports instead
-    const msg = `This report has rotated out of the live feed${String(err).includes("404") ? "" : ` (${String(err)})`}.`;
+    const timedOut = err instanceof DOMException && err.name === "AbortError";
+    // never dead-end: timeout or 404 both fall back to the latest reports
+    const msg = timedOut
+      ? "The briefing took too long to generate. Showing the latest reports instead:"
+      : `This report has rotated out of the live feed${String(err).includes("404") ? "" : ` (${String(err)})`}.`;
     const feed3 = await fetchFeed().catch(() => null);
     const recent = (feed3?.events ?? []).slice(0, 5);
     $("#a-body").innerHTML = `<p>${escapeHtml(msg)}</p>`;

@@ -154,7 +154,9 @@ export async function getArticle(
       mentions: relatedIds.map((id) => ({ "@type": "Thing", identifier: id })),
     },
   };
-  await writeCached(article);
+  // Fire-and-forget cache write: NEVER block the response on Upstash.
+  // A slow/hanging cache must not leave the user staring at an empty shell.
+  void writeCached(article).catch(() => {});
   return article;
 }
 

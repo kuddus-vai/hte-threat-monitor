@@ -276,6 +276,8 @@ body {
 .outage-item.high .o-dot { background: var(--high); }
 
 /* ── article view ─────────────────────────── */
+.loading { opacity: 0.65; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.3; } }
 .article-view {
   position: absolute; inset: 0; z-index: 20;
   overflow-y: auto;
