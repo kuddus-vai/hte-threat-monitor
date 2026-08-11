@@ -79,85 +79,121 @@
       </aside>
 
       <aside id="sidebar">
-        <div class="panel-head">
-          <h2>INTEL FEED</h2>
-          <span id="feed-count" class="badge">0</span>
-        </div>
-
-        <div id="summary-card" class="summary-card hidden">
-          <div class="summary-head">🧠 WEEKLY EXEC BRIEF <span class="trend-sub" id="summary-src"></span></div>
-          <div class="summary-headline" id="summary-headline"></div>
-          <ul class="summary-list" id="summary-threats"></ul>
-          <div class="summary-rec" id="summary-rec"></div>
-        </div>
-
-        <div class="filters" id="filters">
-          <button class="fbtn active" data-sev="all">ALL</button>
-          <button class="fbtn crit" data-sev="critical">CRIT</button>
-          <button class="fbtn high" data-sev="high">HIGH</button>
-          <button class="fbtn med" data-sev="medium">MED</button>
-          <button class="fbtn low" data-sev="low">LOW</button>
-        </div>
-
-        <div class="search-row">
-          <input id="search-box" type="search" placeholder="🔍 Search intel…" autocomplete="off" />
-          <select id="cat-filter" class="cat-filter">
-            <option value="all">All types</option>
-            <option value="ransomware">Ransomware</option>
-            <option value="phishing">Phishing</option>
-            <option value="data_breach">Data breach</option>
-            <option value="vulnerability">Vulnerability</option>
-            <option value="malware">Malware</option>
-            <option value="apt">APT</option>
-            <option value="outage">Outage</option>
-            <option value="other">Other</option>
-          </select>
-          <button id="export-btn" class="export-btn" title="Download CSV">⬇ CSV</button>
-        </div>
-
-        <div class="source-tabs" id="source-tabs">
-          <button class="stab active" data-source="all">ALL SOURCES</button>
-          <button class="stab" data-source="BleepingComputer">BPC</button>
-          <button class="stab" data-source="The Hacker News">THN</button>
-          <button class="stab" data-source="CISA">CISA</button>
-          <button class="stab" data-source="GitHub Status">GITHUB</button>
-          <button class="stab" data-source="AWS">AWS</button>
-          <button class="stab" data-source="Google Cloud">GCP</button>
-          <button class="stab" data-source="AlienVault OTX">OTX</button>
-          <button class="stab" data-source="Dark Reading">DR</button>
-        </div>
-
-        <div id="trend-chart" class="trend-chart hidden">
-          <div class="trend-head">HOURLY THREAT TREND <span class="trend-sub">last 24h</span></div>
-          <svg id="trend-svg" viewBox="0 0 340 90" preserveAspectRatio="none"></svg>
-          <div class="trend-legend">
-            <span><i class="lg-dot crit"></i>CRIT</span>
-            <span><i class="lg-dot high"></i>HIGH</span>
-            <span><i class="lg-dot med"></i>MED</span>
-            <span><i class="lg-dot low"></i>LOW</span>
+        <section class="wcard">
+          <header class="wcard-head">
+            <span class="wcard-title">AI INSIGHTS</span>
+            <span class="wcard-tag live" id="summary-src">LIVE</span>
+          </header>
+          <div id="summary-card" class="wcard-body">
+            <div class="summary-headline" id="summary-headline"></div>
+            <ul class="summary-list" id="summary-threats"></ul>
+            <div class="summary-rec" id="summary-rec"></div>
           </div>
-        </div>
+        </section>
 
-        <div class="country-chips" id="country-chips"></div>
+        <section class="wcard">
+          <header class="wcard-head">
+            <span class="wcard-title">THREAT TIMELINE</span>
+            <span class="wcard-tag" id="tl-badge">24H</span>
+          </header>
+          <div id="trend-chart" class="wcard-body">
+            <svg id="trend-svg" viewBox="0 0 340 90" preserveAspectRatio="none"></svg>
+            <div class="trend-legend">
+              <span><i class="lg-dot crit"></i>CRIT</span>
+              <span><i class="lg-dot high"></i>HIGH</span>
+              <span><i class="lg-dot med"></i>MED</span>
+              <span><i class="lg-dot low"></i>LOW</span>
+            </div>
+          </div>
+        </section>
 
-        <div id="outage-strip" class="outage-strip hidden">
-          <div class="trend-head">⚡ INFRA STATUS <span class="trend-sub">outages & incidents</span></div>
-          <div id="outage-list" class="outage-list"></div>
-        </div>
+        <section class="wcard">
+          <header class="wcard-head">
+            <span class="wcard-title">SIGNAL FILTERS</span>
+            <span class="wcard-tag">A-Z</span>
+          </header>
+          <div class="wcard-body">
+            <div class="filters" id="filters">
+              <button class="fbtn active" data-sev="all">ALL</button>
+              <button class="fbtn crit" data-sev="critical">CRIT</button>
+              <button class="fbtn high" data-sev="high">HIGH</button>
+              <button class="fbtn med" data-sev="medium">MED</button>
+              <button class="fbtn low" data-sev="low">LOW</button>
+            </div>
+            <div class="search-row">
+              <input id="search-box" type="search" placeholder="🔍 Search intel…" autocomplete="off" />
+              <select id="cat-filter" class="cat-filter">
+                <option value="all">All types</option>
+                <option value="ransomware">Ransomware</option>
+                <option value="phishing">Phishing</option>
+                <option value="data_breach">Data breach</option>
+                <option value="vulnerability">Vulnerability</option>
+                <option value="malware">Malware</option>
+                <option value="apt">APT</option>
+                <option value="outage">Outage</option>
+                <option value="other">Other</option>
+              </select>
+              <button id="export-btn" class="export-btn" title="Download CSV">⬇ CSV</button>
+            </div>
+            <div class="source-tabs" id="source-tabs">
+              <button class="stab active" data-source="all">ALL SOURCES</button>
+              <button class="stab" data-source="BleepingComputer">BPC</button>
+              <button class="stab" data-source="The Hacker News">THN</button>
+              <button class="stab" data-source="CISA">CISA</button>
+              <button class="stab" data-source="GitHub Status">GITHUB</button>
+              <button class="stab" data-source="AWS">AWS</button>
+              <button class="stab" data-source="Google Cloud">GCP</button>
+              <button class="stab" data-source="AlienVault OTX">OTX</button>
+              <button class="stab" data-source="Dark Reading">DR</button>
+            </div>
+          </div>
+        </section>
 
-        <div class="stats" id="stats">
-          <div class="stat"><b id="st-crit">0</b><span>CRITICAL</span></div>
-          <div class="stat"><b id="st-high">0</b><span>HIGH</span></div>
-          <div class="stat"><b id="st-med">0</b><span>MEDIUM</span></div>
-          <div class="stat"><b id="st-low">0</b><span>LOW</span></div>
-        </div>
+        <section class="wcard">
+          <header class="wcard-head">
+            <span class="wcard-title">REGIONAL INSTABILITY</span>
+            <span class="wcard-tag">COUNTRIES</span>
+          </header>
+          <div class="wcard-body">
+            <div class="country-chips" id="country-chips"></div>
+          </div>
+        </section>
 
-        <div id="latest-articles" class="latest-articles">
-          <div class="la-head">📄 LATEST REPORTS</div>
-          <ul id="latest-list" class="la-list"></ul>
-        </div>
+        <section class="wcard">
+          <header class="wcard-head">
+            <span class="wcard-title">INFRA OUTAGES</span>
+            <span class="wcard-tag live">ALERTS</span>
+          </header>
+          <div id="outage-strip" class="wcard-body outage-strip">
+            <div id="outage-list" class="outage-list"></div>
+          </div>
+        </section>
 
-        <ul id="feed-list" class="feed-list"></ul>
+        <section class="wcard">
+          <header class="wcard-head">
+            <span class="wcard-title">LATEST REPORTS</span>
+            <span class="wcard-tag">SEO</span>
+          </header>
+          <div class="wcard-body">
+            <ul id="latest-list" class="la-list"></ul>
+          </div>
+        </section>
+
+        <section class="wcard">
+          <header class="wcard-head">
+            <span class="wcard-title">LIVE FEED</span>
+            <span id="feed-count" class="badge">0</span>
+          </header>
+          <div class="wcard-body">
+            <div class="stats" id="stats">
+              <div class="stat"><b id="st-crit">0</b><span>CRITICAL</span></div>
+              <div class="stat"><b id="st-high">0</b><span>HIGH</span></div>
+              <div class="stat"><b id="st-med">0</b><span>MEDIUM</span></div>
+              <div class="stat"><b id="st-low">0</b><span>LOW</span></div>
+            </div>
+            <ul id="feed-list" class="feed-list"></ul>
+          </div>
+        </section>
       </aside>
 
       <footer id="ticker">

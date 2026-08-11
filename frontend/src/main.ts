@@ -314,7 +314,8 @@ async function loadSummary(): Promise<void> {
     const card = $("#summary-card");
     card.classList.remove("hidden");
     $("#summary-headline").textContent = s.headline;
-    $("#summary-src").textContent = s.source === "ai" ? "AI GENERATED" : "HEURISTIC";
+    const srcEl = document.getElementById("summary-src");
+    if (srcEl) srcEl.textContent = s.source === "ai" ? "AI GEN" : "HEURISTIC";
     $("#summary-threats").innerHTML = s.topThreats.map((t) => `<li>${escapeHtml(t)}</li>`).join("");
     $("#summary-rec").textContent = `💡 ${s.recommendation}`;
   } catch {
