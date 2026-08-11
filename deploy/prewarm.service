@@ -1,0 +1,9 @@
+[Unit]
+Description=HTE Threat Monitor — pre-warm AI article cache (top 15 events)
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/kuddus/projects/hte-threat-monitor/backend
+ExecStart=/usr/bin/npx tsx scripts/prewarm-articles.ts 15
+# never block the box if Ollama is mid-load
+Nice=5

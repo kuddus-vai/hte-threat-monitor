@@ -90,7 +90,13 @@ export async function getArticle(
   if (cached) return cached;
 
   let aiGenerated = false;
-  let seoTitle = `${e.severity} ${e.category.replace("_", " ")} — ${e.title.slice(0, 70)}`;
+  const rawTitle = e.title.slice(0, 70);
+  // avoid "critical critical …" when the source title already carries severity
+  const sevWord = e.severity.charAt(0).toUpperCase() + e.severity.slice(1);
+  const hasSevPrefix = new RegExp(`^${sevWord}\\b`, "i").test(e.title);
+  let seoTitle = hasSevPrefix
+    ? rawTitle
+    : `${e.severity} ${e.category.replace("_", " ")} — ${rawTitle}`;
   let description = e.summary.slice(0, 140);
   let body = fallbackBody(e);
 
