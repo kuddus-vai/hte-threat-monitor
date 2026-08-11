@@ -461,6 +461,9 @@ window.addEventListener("hashchange", route);
 $("#article-back").addEventListener("click", () => {
   location.hash = "#/";
 });
+$("#article-map").addEventListener("click", () => {
+  location.hash = "#/";
+});
 void route();
 
 void refresh();
