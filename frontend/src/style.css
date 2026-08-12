@@ -370,12 +370,12 @@ body {
 
 /* ── footer ───────────────────────────────── */
 #app-footer {
-  position: absolute; left: 16px; bottom: 14px; z-index: 9;
+  position: absolute; right: 12px; bottom: 11px; z-index: 12;
   display: flex; gap: 10px; align-items: center;
   font-size: 0.6rem; color: var(--dim); letter-spacing: 0.8px;
-  background: rgba(5, 11, 24, 0.8); backdrop-filter: blur(6px);
-  border: 1px solid var(--border); border-radius: 999px;
-  padding: 4px 14px;
+  background: rgba(5, 7, 15, 0.95); border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px 10px;
+  pointer-events: auto;
 }
 #app-footer a { color: var(--accent); text-decoration: none; }
 #app-footer a:hover { text-decoration: underline; }
@@ -587,8 +587,7 @@ body {
   overflow: hidden;
 }
 .ticker-label {
-  flex-shrink: 0; padding: 0 14px; height: 100%;
-  display: flex; align-items: center;
+  flex-shrink: 0; padding: 0 14px; height: 100%;  display: flex; align-items: center;
   background: var(--crit); color: #fff; font-weight: 800; font-size: 0.72rem;
   letter-spacing: 2px; animation: pulse 2s infinite;
 }
@@ -597,6 +596,7 @@ body {
   white-space: nowrap; display: inline-block;
   animation: scroll 60s linear infinite;
   font-size: 0.78rem; color: var(--text);
+  padding-right: 240px; /* keep news clear of the footer pill */
 }
 .ticker-track:hover { animation-play-state: paused; }
 @keyframes scroll {

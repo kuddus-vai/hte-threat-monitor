@@ -152,7 +152,8 @@ export function updateMap2d(events: ThreatEvent[], opts: Map2dOptions): void {
   if (!map) return;
   lastEvents = events;
   lastOpts = opts;
-  if (!map.isStyleLoaded()) return; // style still loading → applied on 'load'
+  // NOTE: no isStyleLoaded guard here — markers/setData are safe pre-load.
+  // Only setLayoutProperty (updateZones) needs the style-loaded guard.
   markerLayers.forEach((m) => m.remove());
   markerLayers = [];
 
