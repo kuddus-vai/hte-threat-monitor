@@ -4,6 +4,7 @@ import { initGlobe, updateGlobe, setGlobeMode, setLayer } from "./globe";
 import { initMap2d, updateMap2d, resizeMap2d } from "./map2d";
 import { SEV_COLORS, fetchFeed, fetchHealth, fmtDate, fmtTime } from "./api";
 import { renderAdSlot } from "./ads";
+import { articleSlug } from "../../backend/src/slug";
 
 const $ = <T extends HTMLElement>(sel: string): T => document.querySelector(sel) as T;
 
@@ -170,7 +171,7 @@ function renderLatestArticles(): void {
   box.innerHTML = recent
     .map(
       (e) =>
-        `<li><a href="/article/${encodeURIComponent(e.id)}"><span class="la-sev" style="color:${SEV_COLORS[e.severity]}">${e.severity.toUpperCase()}</span>${escapeHtml(e.title.slice(0, 60))}</a></li>`,
+        `<li><a href="/article/${articleSlug(e.title, e.id)}"><span class="la-sev" style="color:${SEV_COLORS[e.severity]}">${e.severity.toUpperCase()}</span>${escapeHtml(e.title.slice(0, 60))}</a></li>`,
     )
     .join("");
 }
@@ -209,8 +210,8 @@ function renderFeed(): void {
         setCountry(chip.dataset.country ?? "");
         return;
       }
-      // Phase 4: open internal article page — keeps users on-site (real URL for SEO)
-      history.pushState({}, "", `/article/${encodeURIComponent(e.id)}`);
+      // Phase 4: open internal article page — keeps users on-site (SEO slug URL)
+      history.pushState({}, "", `/article/${articleSlug(e.title, e.id)}`);
       route();
     });
     list.appendChild(li);
@@ -593,8 +594,10 @@ bindServicesModal();
 // ── Phase 4: article router (hash-based SPA) ─────────────
 interface ArticlePayload {
   id: string;
+  slug?: string;
   seoTitle: string;
   description: string;
+  faq?: Array<{ q: string; a: string }>;
   body: string;
   category: string;
   severity: string;
@@ -635,7 +638,9 @@ async function showArticle(id: string): Promise<void> {
   view.classList.remove("hidden");
   view.scrollTop = 0;
   // immediate content from LOCAL feed data — never a blank shell, even offline
-  const localEvent = feed.events.find((e) => e.id === id);
+  // (segment is an SEO slug OR the raw event id — resolve both)
+  const localEvent =
+    feed.events.find((e) => e.id === id) ?? feed.events.find((e) => articleSlug(e.title, e.id) === id);
   if (localEvent) {
     $("#a-sev").textContent = localEvent.severity;
     $("#a-sev").className = `sev-pill ${localEvent.severity}`;
@@ -676,6 +681,17 @@ async function showArticle(id: string): Promise<void> {
     $("#a-attribution").textContent = `Reported by ${a.source} · ${a.aiGenerated ? "AI-generated briefing" : "Auto briefing"} · HTE Threat Monitor`;
     $("#a-source-link").setAttribute("href", a.sourceUrl);
 
+    // GEO/AEO: Key Takeaways + FAQ block (answer-engine + snippet ready)
+    const faqBox = document.createElement("div");
+    faqBox.className = "a-faq";
+    const faqs = Array.isArray(a.faq) && a.faq.length ? a.faq : [];
+    if (faqs.length) {
+      faqBox.innerHTML = `<h3>⚡ KEY FACTS</h3>${faqs
+        .map((f) => `<div class="a-faq-item"><b>${escapeHtml(f.q)}</b><p>${escapeHtml(f.a)}</p></div>`)
+        .join("")}`;
+      $("#a-body").appendChild(faqBox);
+    }
+
     // Ad slots (top + mid)
     renderAdSlot($("#ad-slot-top"), a.category);
     renderAdSlot($("#ad-slot-mid"), a.category);
@@ -690,7 +706,7 @@ async function showArticle(id: string): Promise<void> {
       item.className = "related-item";
       item.innerHTML = `<span class="r-sev ${r.severity}">${r.severity.toUpperCase()}</span> ${escapeHtml(r.title.slice(0, 90))}`;
       item.addEventListener("click", () => {
-        history.pushState({}, "", `/article/${encodeURIComponent(r.id)}`);
+        history.pushState({}, "", `/article/${articleSlug(r.title, r.id)}`);
         route();
       });
       box.appendChild(item);

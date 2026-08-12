@@ -520,6 +520,11 @@ body {
 .outage-item.high .o-dot { background: var(--high); }
 
 /* ── article view ─────────────────────────── */
+.a-faq { margin-top: 14px; padding: 10px 12px; background: rgba(56,189,248,0.05); border: 1px solid rgba(56,189,248,0.2); border-radius: 10px; }
+.a-faq h3 { font-size: 0.7rem; letter-spacing: 1.5px; color: #7dd3fc; margin: 0 0 8px; }
+.a-faq-item { margin-bottom: 10px; }
+.a-faq-item b { display: block; font-size: 0.78rem; color: var(--text); margin-bottom: 3px; }
+.a-faq-item p { margin: 0; font-size: 0.78rem; color: var(--dim); line-height: 1.5; }
 .loading { opacity: 0.65; animation: pulse 1.4s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.3; } }
 .article-view {

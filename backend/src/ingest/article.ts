@@ -8,9 +8,11 @@ import type { ThreatEvent } from "../types.js";
 import { config } from "../config.js";
 import { ollamaChat } from "../ai/ollama.js";
 import { cache } from "../cache/cache.js";
+import { articleSlug } from "../slug.js";
 
 export interface Article {
   id: string;
+  slug: string;
   seoTitle: string;
   description: string;
   body: string; // markdown-ish paragraphs
@@ -24,9 +26,10 @@ export interface Article {
   generatedAt: string;
   aiGenerated: boolean;
   jsonLd: Record<string, unknown>;
+  faq: Array<{ q: string; a: string }>; // GEO/AEO answer-format Q&A
 }
 
-const key = (id: string) => `hte:article:v1:${id}`;
+const key = (id: string) => `hte:article:v2:${id}`;
 
 export async function readCachedArticle(id: string): Promise<Article | null> {
   if (!config.upstashUrl) return null;
@@ -127,8 +130,21 @@ export async function getArticle(
   }
 
   const relatedIds = related.filter((r) => r.id !== e.id).slice(0, 4).map((r) => r.id);
+  const slug = articleSlug(e.title, e.id);
+  // GEO/AEO: answer-format Q&A built from the event facts (deterministic, original wording)
+  const faq: Array<{ q: string; a: string }> = [
+    {
+      q: `What is the ${e.category.replace("_", " ")} incident reported by ${e.source}?`,
+      a: `${e.summary.slice(0, 220)} The threat was classified as ${e.severity}-severity and affects entities associated with ${e.country || "multiple regions"}.`,
+    },
+    {
+      q: `What should organizations do about this ${e.category.replace("_", " ")} threat?`,
+      a: "Verify patch levels on affected systems, monitor for indicators of compromise, review exposure to the affected attack surface, and follow the mitigation guidance in the original report linked on this page.",
+    },
+  ];
   const article: Article = {
     id: e.id,
+    slug,
     seoTitle,
     description,
     body,
@@ -141,6 +157,7 @@ export async function getArticle(
     publishedAt: e.publishedAt,
     generatedAt: new Date().toISOString(),
     aiGenerated,
+    faq,
     jsonLd: {
       "@context": "https://schema.org",
       "@type": "NewsArticle",
@@ -149,9 +166,16 @@ export async function getArticle(
       datePublished: e.publishedAt,
       author: { "@type": "Organization", name: "High Tech Enterprise" },
       publisher: { "@type": "Organization", name: "High Tech Enterprise" },
-      mainEntityOfPage: { "@type": "WebPage" },
+      mainEntityOfPage: { "@type": "WebPage", "@id": `/article/${slug}` },
+      url: `/article/${slug}`,
       about: { "@type": "Thing", name: e.category.replace("_", " ") },
-      mentions: relatedIds.map((id) => ({ "@type": "Thing", identifier: id })),
+      mentions: relatedIds.length
+        ? [
+            { "@type": "Thing", name: e.actor || e.category.replace("_", " "), identifier: e.actor || undefined },
+            ...relatedIds.map((id) => ({ "@type": "Thing", identifier: id })),
+          ]
+        : undefined,
+      speaksAbout: faq.map((f) => ({ "@type": "Question", name: f.q })),
     },
   };
   // Fire-and-forget cache write: NEVER block the response on Upstash.
@@ -160,11 +184,26 @@ export async function getArticle(
   return article;
 }
 
-/** Sitemap URLs from the current feed. */
+/** Find the event matching an /article/<segment> — segment = slug OR raw event id. */
+export async function resolveArticleSegment(segment: string): Promise<{ event: ThreatEvent; related: ThreatEvent[] } | null> {
+  const feed = await cache.get();
+  const events = feed?.events ?? [];
+  const hashSegment = decodeURIComponent(segment);
+  const find = (e: ThreatEvent) =>
+    e.id === hashSegment || articleSlug(e.title, e.id) === hashSegment || articleSlug(e.title, e.id) === hashSegment.replace(/-[a-z0-9]{6}$/, "");
+  const event = events.find(find);
+  if (!event) return null;
+  const related = events
+    .filter((r) => r.id !== event.id && (r.category === event.category || r.country === event.country))
+    .slice(0, 6);
+  return { event, related };
+}
+
+/** Sitemap URLs (SEO slugs) from the current feed. */
 export async function sitemapUrls(base: string): Promise<string[]> {
   const feed = await cache.get();
   const events = feed?.events ?? [];
-  const urls = events.map((e) => `${base}/article/${encodeURIComponent(e.id)}`);
+  const urls = events.map((e) => `${base}/article/${articleSlug(e.title, e.id)}`);
   urls.unshift(`${base}/`);
   return urls.slice(0, 500);
 }

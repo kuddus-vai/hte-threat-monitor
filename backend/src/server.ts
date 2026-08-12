@@ -8,7 +8,8 @@ import { cache } from "./cache/cache.js";
 import { runRefresh } from "./ingest/pipeline.js";
 import { ollamaHealth } from "./ai/ollama.js";
 import { getWeeklySummary } from "./ingest/weekly.js";
-import { getArticle, readCachedArticle, sitemapUrls } from "./ingest/article.js";
+import { getArticle, readCachedArticle, sitemapUrls, resolveArticleSegment } from "./ingest/article.js";
+import { articleSlug } from "./slug.js";
 import { config } from "./config.js";
 
 export interface Env {
@@ -104,22 +105,31 @@ export async function handleSummary(req: Request, env: Env): Promise<Response> {
   return json(summary, 200, env);
 }
 
-/** GET /api/article/:id — AI-extended article page payload. */
+/** GET /api/article/:id — AI-extended article page payload (id OR SEO slug). */
 export async function handleArticle(req: Request, env: Env): Promise<Response> {
   const url = new URL(req.url);
   const id = decodeURIComponent(url.pathname.split("/").pop() ?? "");
   const force = url.searchParams.get("force") === "1";
   if (!id) return json({ error: "missing id" }, 400, env);
 
+  // resolve slug → event id (fall back to raw id match)
+  let eventId = id;
+  try {
+    const resolved = await resolveArticleSegment(id);
+    if (resolved) eventId = resolved.event.id;
+  } catch {
+    /* keep raw id */
+  }
+
   // 1) cached article first — survives feed rotation (event may have aged out)
   if (!force) {
-    const cached = await readCachedArticle(id);
+    const cached = await readCachedArticle(eventId);
     if (cached) return json(cached, 200, env);
   }
 
   // 2) else generate from the current feed
   const feed = (await cache.get()) ?? emptyFeed();
-  const ev = feed.events.find((e) => e.id === id);
+  const ev = feed.events.find((e) => e.id === eventId);
   if (!ev) return json({ error: "event not found" }, 404, env);
   const article = await getArticle(ev, feed.events, force);
   return json(article, 200, env);
@@ -144,32 +154,64 @@ ${urls.map((u) => `  <url><loc>${u}</loc></url>`).join("\n")}
  *  The SPA hydrates and shows the article; crawlers read the meta directly. */
 export async function handleArticlePage(req: Request, env: Env, shell: Response): Promise<Response> {
   const url = new URL(req.url);
-  const id = decodeURIComponent(url.pathname.split("/").pop() ?? "");
+  const segment = decodeURIComponent(url.pathname.split("/").pop() ?? "");
   const html = await shell.text();
 
   // try to enrich with article meta (best effort — fall back to plain shell)
   let title = "HTE Cyber Threat & Tech Monitor";
   let description = "Real-time global cyber threat & tech intelligence.";
   let jsonLd = "";
+  let canonical = `/article/${encodeURIComponent(segment)}`;
+  let seedId = segment;
   try {
-    const feed = (await cache.get()) ?? emptyFeed();
-    const ev = feed.events.find((e) => e.id === id);
-    if (ev) {
-      const cached = await readCachedArticle(id);
+    const resolved = await resolveArticleSegment(segment);
+    if (resolved) {
+      const { event: ev, related } = resolved;
+      const cached = await readCachedArticle(ev.id);
+      const slug = cached?.slug ?? articleSlug(ev.title, ev.id);
       const seoTitle = cached?.seoTitle ?? ev.title.slice(0, 70);
       const desc = cached?.description ?? ev.summary.slice(0, 140);
+      const faq = cached?.faq ?? [
+        { q: `What is the ${ev.category.replace("_", " ")} incident reported by ${ev.source}?`, a: `${ev.summary.slice(0, 220)} The threat was classified as ${ev.severity}-severity.` },
+        { q: `What should organizations do about this ${ev.category.replace("_", " ")} threat?`, a: "Verify patch levels, monitor for indicators of compromise, review exposure, and follow the original report's mitigation guidance." },
+      ];
+      canonical = `/article/${slug}`;
+      seedId = ev.id;
       title = `${seoTitle} | HTE Threat Monitor`;
       description = desc;
-      jsonLd = `<script type="application/ld+json">${JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "NewsArticle",
-        headline: seoTitle,
-        description: desc,
-        datePublished: ev.publishedAt,
-        author: { "@type": "Organization", name: "High Tech Enterprise" },
-        publisher: { "@type": "Organization", name: "High Tech Enterprise" },
-        mainEntityOfPage: { "@type": "WebPage", "@id": `${url.origin}/article/${encodeURIComponent(id)}` },
-      })}</script>`;
+      jsonLd = `<script type="application/ld+json">${JSON.stringify([
+        {
+          "@context": "https://schema.org",
+          "@type": "NewsArticle",
+          headline: seoTitle,
+          description: desc,
+          datePublished: ev.publishedAt,
+          author: { "@type": "Organization", name: "High Tech Enterprise" },
+          publisher: { "@type": "Organization", name: "High Tech Enterprise" },
+          mainEntityOfPage: { "@type": "WebPage", "@id": `${url.origin}${canonical}` },
+          url: `${url.origin}${canonical}`,
+          about: { "@type": "Thing", name: ev.category.replace("_", " ") },
+          mentions: ev.actor ? { "@type": "Thing", name: ev.actor } : undefined,
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faq.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "HTE Threat Monitor", item: `${url.origin}/` },
+            { "@type": "ListItem", position: 2, name: ev.category.replace("_", " "), item: `${url.origin}/article/${slug}` },
+          ],
+        },
+      ])}</script>`;
+      void related;
     }
   } catch {
     /* shell fallback */
@@ -178,7 +220,7 @@ export async function handleArticlePage(req: Request, env: Env, shell: Response)
   const seeded = html
     .replace(/<title>[^<]*<\/title>/, `<title>${escapeXml(title)}</title>`)
     .replace(/<meta name="description"[^>]*>/, "")
-    .replace("</head>", `<meta name="description" content="${escapeXml(description)}" />\n  <meta name="robots" content="index, follow" />\n  <link rel="canonical" href="${url.origin}/article/${encodeURIComponent(id)}" />\n  ${jsonLd}\n  <script>history.replaceState({}, "", "/article/${encodeURIComponent(id)}");location.hash = "#/article/${encodeURIComponent(id)}";</script>\n  </head>`);
+    .replace("</head>", `<meta name="description" content="${escapeXml(description)}" />\n  <meta name="robots" content="index, follow" />\n  <link rel="canonical" href="${url.origin}${canonical}" />\n  ${jsonLd}\n  <script>history.replaceState({}, "", "/article/${canonical.split("/").pop()}");location.hash = "#/article/${seedId}";</script>\n  </head>`);
 
   return new Response(seeded, {
     status: 200,
