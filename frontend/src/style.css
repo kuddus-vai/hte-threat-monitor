@@ -106,7 +106,7 @@ body {
 /* ── tactical grid overlay on globe ───────── */
 #map-area {
   position: absolute;
-  top: 110px; left: 218px; right: 388px; bottom: 52px;
+  top: 110px; left: 218px; right: 590px; bottom: 52px;
   z-index: 5;
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -204,14 +204,14 @@ body {
 .mob-toggle { display: none; cursor: pointer; background: rgba(255,255,255,0.06); color: var(--dim); border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; font-size: 0.8rem; }
 
 @media (max-width: 1180px) {
-  #sidebar { width: 320px; }
-  #map-area { left: 204px; right: 344px; }
+  #sidebar { width: 500px; }
+  #map-area { left: 204px; right: 524px; }
 }
 @media (max-width: 1024px) {
   #left-panel { transform: translateX(-120%); transition: transform 0.25s; box-shadow: 8px 0 30px rgba(0,0,0,0.5); }
   #left-panel.mob-open { transform: translateX(0); }
-  #sidebar { width: 300px; }
-  #map-area { left: 12px; right: 324px; }
+  #sidebar { width: 480px; }
+  #map-area { left: 12px; right: 504px; }
   .mob-toggle { display: inline-block; }
 }
 @media (max-width: 768px) {
@@ -222,6 +222,7 @@ body {
   #left-panel { top: 118px; bottom: 56px; left: 8px; width: 220px; }
   #sidebar { top: 118px; bottom: 56px; right: 8px; left: 8px; width: auto; max-height: 62%; display: none; }
   #sidebar.mob-open { display: flex; }
+  .sb-col { overflow-y: auto; }
   #ticker { display: none; }
   #app-footer { display: none; }
   #legend { bottom: 60px; left: 8px; flex-wrap: wrap; }
@@ -292,13 +293,18 @@ body {
 /* ── sidebar ─────────────────────────────── */
 #sidebar {
   position: absolute; top: 110px; right: 16px; bottom: 52px; z-index: 10;
-  width: 360px; display: flex; flex-direction: column;
+  width: 560px; display: flex; flex-direction: row; gap: 0;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 14px;
   backdrop-filter: blur(10px);
-  overflow-y: auto;
+  overflow: hidden;
 }
+.sb-col { flex: 1; display: flex; flex-direction: column; overflow-y: auto; min-width: 0; padding: 8px 4px; }
+.sb-left { border-right: 1px solid var(--border); }
+.sb-right .wcard { flex: 1; display: flex; flex-direction: column; margin-right: 4px; }
+.sb-right .wcard-body { flex: 1; display: flex; flex-direction: column; }
+.sb-right .feed-list { flex: 1; overflow-y: auto; }
 .panel-head {
   display: flex; justify-content: space-between; align-items: center;
   padding: 12px 16px; border-bottom: 1px solid var(--border);
