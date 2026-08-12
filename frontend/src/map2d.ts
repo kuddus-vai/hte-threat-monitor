@@ -230,17 +230,9 @@ export function updateMap2d(events: ThreatEvent[], opts: Map2dOptions): void {
     (m.getSource(arcSourceId) as maplibregl.GeoJSONSource).setData({ type: "FeatureCollection", features: [] });
   }
 
-  // labels — country text markers
-  if (opts.labels) {
-    const seen = new Set<string>();
-    for (const e of withCoords) {
-      if (!e.country || seen.has(e.country)) continue;
-      seen.add(e.country);
-      markerLayers.push(makeLabel([e.lon as number, e.lat as number], e.country));
-    }
-  }
+  // (country labels removed — user request)
 
-  // activity zones — country choropleth (World Monitor conflict-zone shading)
+  // activity zones — rings on/off via layer toggle
   updateZones(events, opts.zones);
 }
 

@@ -461,7 +461,6 @@ function bindFilters(): void {
   bindLayerChk("#ly-points", "points");
   bindLayerChk("#ly-arcs", "arcs");
   bindLayerChk("#ly-rings", "rings");
-  bindLayerChk("#ly-labels", "labels");
   bindLayerChk("#ly-zones", "zones");
   bindLayerChk("#ly-rans", "ransomware");
   bindLayerChk("#ly-apt", "apt");
