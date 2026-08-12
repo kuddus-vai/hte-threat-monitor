@@ -116,9 +116,13 @@ let lastEvents: ThreatEvent[] = [];
 export function setGlobeMode(threeD: boolean): void {
   threeDMode = threeD;
   if (!globe) return;
-  // globe.gl exposes .perspective() → THREE.PerspectiveCamera
-  const cam = (globe as unknown as { perspective: () => { fov: number } }).perspective();
-  if (cam) cam.fov = threeD ? 60 : 0; // 0 fov = orthographic (2D)
+  // globe.gl exposes .camera() → THREE.PerspectiveCamera (v2+); older: .perspective()
+  const g = globe as unknown as { camera?: () => { fov: number; updateProjectionMatrix?: () => void }; perspective?: () => { fov: number; updateProjectionMatrix?: () => void } };
+  const cam = g.camera?.() ?? g.perspective?.();
+  if (cam) {
+    cam.fov = threeD ? 60 : 0; // 0 fov = orthographic (2D)
+    cam.updateProjectionMatrix?.();
+  }
   globe.controls().autoRotate = threeD;
 }
 

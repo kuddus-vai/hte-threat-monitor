@@ -46,6 +46,7 @@ let layerState = {
   arcs: true,
   rings: true,
   labels: true,
+  zones: true,
   ransomware: true,
   apt: true,
   breach: true,
@@ -58,6 +59,7 @@ const map2dOpts = () => ({
   arcs: layerState.arcs,
   labels: layerState.labels,
   rings: layerState.rings,
+  zones: layerState.zones,
   ransomware: layerState.ransomware,
   apt: layerState.apt,
   breach: layerState.breach,
@@ -460,6 +462,7 @@ function bindFilters(): void {
   bindLayerChk("#ly-arcs", "arcs");
   bindLayerChk("#ly-rings", "rings");
   bindLayerChk("#ly-labels", "labels");
+  bindLayerChk("#ly-zones", "zones");
   bindLayerChk("#ly-rans", "ransomware");
   bindLayerChk("#ly-apt", "apt");
   bindLayerChk("#ly-breach", "breach");
@@ -470,6 +473,18 @@ function bindFilters(): void {
     const on = (ev.target as HTMLInputElement).checked;
     $("#globe").classList.toggle("grid-on", on);
     $("#map2d").classList.toggle("grid-on", on);
+  });
+
+  // mobile panel toggles
+  $("#mob-layers").addEventListener("click", () => {
+    const lp = $("#left-panel");
+    lp.classList.toggle("mob-open");
+    $("#sidebar").classList.remove("mob-open");
+  });
+  $("#mob-feed").addEventListener("click", () => {
+    const sb = $("#sidebar");
+    sb.classList.toggle("mob-open");
+    $("#left-panel").classList.remove("mob-open");
   });
 
   // Phase 5.5: share + fullscreen
@@ -741,7 +756,11 @@ $("#article-map").addEventListener("click", () => {
   route();
 });
 void route();
-setMapMode(false); // 2D tactical map is the default view
+try {
+  setMapMode(false); // 2D tactical map is the default view
+} catch (err) {
+  console.error("map init error (app continues):", err);
+}
 
 void refresh();
 void checkHealth();

@@ -3,6 +3,30 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { ThreatEvent } from "../../backend/src/types";
 import { SEV_COLORS } from "./api";
 
+// country code → world-atlas name (world-atlas uses full names)
+const CC2NAME: Record<string, string> = {
+  US: "United States of America", GB: "United Kingdom", KR: "South Korea", KP: "North Korea",
+  RU: "Russia", CN: "China", IN: "India", PK: "Pakistan", IR: "Iran", IL: "Israel",
+  SA: "Saudi Arabia", AE: "United Arab Emirates", EG: "Egypt", UA: "Ukraine", PL: "Poland",
+  DE: "Germany", FR: "France", NL: "Netherlands", SE: "Sweden", CH: "Switzerland",
+  IT: "Italy", ES: "Spain", JP: "Japan", AU: "Australia", CA: "Canada", BR: "Brazil",
+  AR: "Argentina", ID: "Indonesia", MY: "Malaysia", SG: "Singapore", TH: "Thailand",
+  TW: "Taiwan", HK: "Hong Kong", VN: "Vietnam", TR: "Turkey", MX: "Mexico",
+  IE: "Ireland", LK: "Sri Lanka", BD: "Bangladesh", NG: "Nigeria", ZA: "South Africa",
+  KZ: "Kazakhstan", CZ: "Czechia", SK: "Slovakia", RO: "Romania", HU: "Hungary",
+  GR: "Greece", PT: "Portugal", NO: "Norway", FI: "Finland", DK: "Denmark", AT: "Austria",
+  BE: "Belgium", NZ: "New Zealand", CO: "Colombia", PE: "Peru", CL: "Chile", GE: "Georgia",
+  AM: "Armenia", AZ: "Azerbaijan", JO: "Jordan", QA: "Qatar", KW: "Kuwait",
+  OM: "Oman", YE: "Yemen", LB: "Lebanon", SY: "Syria", IQ: "Iraq", AF: "Afghanistan",
+  MN: "Mongolia", KH: "Cambodia", LA: "Laos", MM: "Myanmar", NP: "Nepal", UZ: "Uzbekistan",
+  BG: "Bulgaria", RS: "Serbia", HR: "Croatia", SI: "Slovenia", EE: "Estonia", LV: "Latvia",
+  LT: "Lithuania", BY: "Belarus", MD: "Moldova", AL: "Albania", MK: "North Macedonia",
+  BA: "Bosnia and Herzegovina", ME: "Montenegro", CY: "Cyprus", MT: "Malta", LU: "Luxembourg",
+  IS: "Iceland", DZ: "Algeria", MA: "Morocco", TN: "Tunisia", LY: "Libya", SD: "Sudan",
+  ET: "Ethiopia", KE: "Kenya", TZ: "Tanzania", UG: "Uganda", GH: "Ghana", CI: "Côte d'Ivoire",
+  SN: "Senegal", CM: "Cameroon",
+};
+
 type GeoFeature = {
   type: "Feature";
   properties: Record<string, unknown>;
@@ -18,6 +42,8 @@ let map: maplibregl.Map | null = null;
 let markerLayers: maplibregl.Marker[] = [];
 let arcSourceId = "arcs";
 let ringSourceId = "rings";
+let lastEvents: ThreatEvent[] = [];
+let lastOpts: Map2dOptions | null = null;
 
 const TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 const TILE_ATTR =
@@ -28,6 +54,7 @@ export interface Map2dOptions {
   arcs: boolean;
   labels: boolean;
   rings: boolean;
+  zones: boolean;
   ransomware: boolean;
   apt: boolean;
   breach: boolean;
@@ -114,10 +141,18 @@ export function initMap2d(el: HTMLElement): void {
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
   arcSourceId = "arcs";
   ringSourceId = "rings";
+  map.on("load", () => {
+    // re-apply any data/options queued while the style was loading
+    if (lastOpts) updateMap2d(lastEvents, lastOpts);
+    else updateMap2d([], { points: false, arcs: false, labels: false, rings: false, zones: false, ransomware: false, apt: false, breach: false, vuln: false, outage: false, critical: false });
+  });
 }
 
 export function updateMap2d(events: ThreatEvent[], opts: Map2dOptions): void {
   if (!map) return;
+  lastEvents = events;
+  lastOpts = opts;
+  if (!map.isStyleLoaded()) return; // style still loading → applied on 'load'
   markerLayers.forEach((m) => m.remove());
   markerLayers = [];
 
@@ -203,10 +238,19 @@ export function updateMap2d(events: ThreatEvent[], opts: Map2dOptions): void {
       markerLayers.push(makeLabel([e.lon as number, e.lat as number], e.country));
     }
   }
+
+  // activity zones — country choropleth (World Monitor conflict-zone shading)
+  updateZones(events, opts.zones);
 }
 
 export function resizeMap2d(): void {
   map?.resize();
+}
+
+function updateZones(_events: ThreatEvent[], enabled: boolean): void {
+  if (!map || !map.isStyleLoaded()) return;
+  // "activity zones" visual = alert rings (critical/high radius) on/off
+  map.setLayoutProperty("ring-layer", "visibility", enabled ? "visible" : "none");
 }
 
 function makeMarker(lngLat: [number, number], color: string, glyph: string, popup: string): maplibregl.Marker {
