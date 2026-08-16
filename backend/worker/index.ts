@@ -12,6 +12,9 @@
  *     OLLAMA_BASE_URL to a remote Ollama/Groq-compatible endpoint to enable AI.
  *   - Set secrets with: npx wrangler secret put <NAME>
  */
+import { getHandlers } from "../src/server.js";
+import { adsTxt, robotsTxt, privacyPage, aboutPage } from "../src/static-pages.js";
+
 export interface Env {
   CORS_ORIGIN?: string;
   AI_ENGINE?: string;
@@ -23,6 +26,7 @@ export interface Env {
   NTFY_TOPIC?: string;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
+  ADSENSE_PUB_ID?: string;
 }
 
 type Handler = (req: Request, env: { corsOrigin: string; cacheKind: string }, shell?: Response) => Promise<Response>;
@@ -39,36 +43,9 @@ interface Handlers {
   handleArticlePage: Handler;
 }
 
-let handlersPromise: Promise<Handlers> | null = null;
-
-async function getHandlers(e: Env): Promise<Handlers> {
-  if (!handlersPromise) {
-    // Install the edge shim BEFORE importing src/server.js → config.ts
-    (globalThis as any).__HTE_EDGE__ = true;
-    (globalThis as any).process = {
-      env: {
-        PORT: "8787",
-        CORS_ORIGIN: e.CORS_ORIGIN || "*",
-        AI_ENGINE: e.AI_ENGINE || "none",
-        OLLAMA_BASE_URL: e.OLLAMA_BASE_URL || "",
-        OLLAMA_MODEL: e.OLLAMA_MODEL || "dolphin-llama3:8b",
-        OTX_API_KEY: e.OTX_API_KEY || "",
-        UPSTASH_REDIS_REST_URL: e.UPSTASH_REDIS_REST_URL || "",
-        UPSTASH_REDIS_REST_TOKEN: e.UPSTASH_REDIS_REST_TOKEN || "",
-        REFRESH_INTERVAL_MIN: "15",
-        NTFY_TOPIC: e.NTFY_TOPIC || "",
-        TELEGRAM_BOT_TOKEN: e.TELEGRAM_BOT_TOKEN || "",
-        TELEGRAM_CHAT_ID: e.TELEGRAM_CHAT_ID || "",
-      },
-    };
-    handlersPromise = import("../src/server.js") as unknown as Promise<Handlers>;
-  }
-  return handlersPromise;
-}
-
 export default {
   async fetch(request: Request, e: Env): Promise<Response> {
-    const handlers = await getHandlers(e);
+    const handlers = getHandlers();
     const corsOrigin = e.CORS_ORIGIN || "*";
     const cacheKind =
       e.UPSTASH_REDIS_REST_URL && e.UPSTASH_REDIS_REST_TOKEN ? "upstash" : "memory";
@@ -100,6 +77,18 @@ export default {
         return handlers.handleSummary(request, ctx);
       case "/sitemap.xml":
         return handlers.handleSitemap(request, ctx);
+      case "/ads.txt":
+        return new Response(adsTxt(e.ADSENSE_PUB_ID || "pub-0000000000000000"), {
+          headers: { "content-type": "text/plain; charset=utf-8" },
+        });
+      case "/robots.txt":
+        return new Response(robotsTxt(url.origin), {
+          headers: { "content-type": "text/plain; charset=utf-8" },
+        });
+      case "/privacy":
+        return new Response(privacyPage(), { headers: { "content-type": "text/html; charset=utf-8" } });
+      case "/about":
+        return new Response(aboutPage(), { headers: { "content-type": "text/html; charset=utf-8" } });
     }
 
     // article route: /api/article/<id>

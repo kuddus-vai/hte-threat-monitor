@@ -236,6 +236,31 @@ function emptyFeed(): ThreatFeed {
   return { updatedAt: new Date().toISOString(), sourceCount: 0, total: 0, events: [] };
 }
 
+// Re-export the handler map for the edge Worker (static import keeps bundling simple).
+export function getHandlers(): {
+  handleThreats: typeof handleThreats;
+  handleRefresh: typeof handleRefresh;
+  handleHealth: typeof handleHealth;
+  handleStats: typeof handleStats;
+  handleTrends: typeof handleTrends;
+  handleSummary: typeof handleSummary;
+  handleArticle: typeof handleArticle;
+  handleSitemap: typeof handleSitemap;
+  handleArticlePage: typeof handleArticlePage;
+} {
+  return {
+    handleThreats,
+    handleRefresh,
+    handleHealth,
+    handleStats,
+    handleTrends,
+    handleSummary,
+    handleArticle,
+    handleSitemap,
+    handleArticlePage,
+  };
+}
+
 // ─── Local dev server (thin router; replaceable by edge adapter) ───────────
 type LocalRouter = { handle(req: Request): Promise<Response> };
 
