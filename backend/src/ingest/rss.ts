@@ -45,6 +45,42 @@ export const RSS_SOURCES: RssSource[] = [
     category: "vulnerability",
   },
   {
+    id: "nvd",
+    name: "NVD Recent CVEs",
+    url: "https://feeds.feedburner.com/nvd?format=xml",
+    category: "vulnerability",
+  },
+  {
+    id: "therecord",
+    name: "The Record",
+    url: "https://therecord.media/feed",
+    category: "news",
+  },
+  {
+    id: "exploitdb",
+    name: "Exploit-DB",
+    url: "https://www.exploit-db.com/rss.xml",
+    category: "vulnerability",
+  },
+  {
+    id: "krebs",
+    name: "Krebs on Security",
+    url: "https://krebsonsecurity.com/feed/",
+    category: "news",
+  },
+  {
+    id: "cloudflare-status",
+    name: "Cloudflare Status",
+    url: "https://www.cloudflarestatus.com/history.atom",
+    category: "outage",
+  },
+  {
+    id: "azure-status",
+    name: "Azure Status",
+    url: "https://status.azure.com/en-us/status-feed/",
+    category: "outage",
+  },
+  {
     id: "github-status",
     name: "GitHub Status",
     url: "https://www.githubstatus.com/history.atom",

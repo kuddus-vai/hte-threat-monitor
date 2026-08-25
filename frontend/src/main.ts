@@ -3,7 +3,7 @@ import type { ThreatEvent, ThreatFeed, TrendPoint } from "../../backend/src/type
 import { initGlobe, updateGlobe, setGlobeMode, setLayer } from "./globe";
 import { initMap2d, updateMap2d, resizeMap2d } from "./map2d";
 import { SEV_COLORS, fetchFeed, fetchHealth, fmtDate, fmtTime } from "./api";
-import { renderAdSlot } from "./ads";
+import { renderAdSlot, renderSidebarAd } from "./ads";
 import { articleSlug } from "../../backend/src/slug";
 
 const $ = <T extends HTMLElement>(sel: string): T => document.querySelector(sel) as T;
@@ -156,6 +156,8 @@ function renderAll(): void {
   renderCountryChips();
   renderOutages();
   renderLatestArticles();
+  const sideAd = document.getElementById("ad-slot-side");
+  if (sideAd) renderSidebarAd(sideAd, "news");
   if (mapMode3D) {
     updateGlobe(filteredEvents());
   } else {
@@ -329,21 +331,24 @@ async function loadSummary(): Promise<void> {
 // ── ticker ───────────────────────────────────────────────
 function renderTicker(): void {
   const track = $("#ticker-track");
-  const items = feed.events.slice(0, 24);
+  const items = feed.events.slice(0, 40);
   if (items.length === 0) {
     track.innerHTML = '<span class="tick-item">Waiting for intelligence…</span>';
     return;
   }
+  // truncate long titles so the ticker stays scannable
   const html = items
     .map(
       (e) =>
         `<span class="tick-item"><span class="sev ${e.severity}">${e.severity.toUpperCase()}</span> — ${escapeHtml(
-          e.title,
+          e.title.length > 90 ? e.title.slice(0, 87) + "…" : e.title,
         )}</span>`,
     )
     .join("");
-  // duplicate content so the -50% translate loops seamlessly
+  // duplicate content so the -50% translate loops seamlessly; duration scales with volume
   track.innerHTML = html + html;
+  const dur = Math.max(60, Math.min(180, items.length * 4));
+  track.style.animationDuration = `${dur}s`;
 }
 
 // ── outage strip (infra status) ────────────────────────
