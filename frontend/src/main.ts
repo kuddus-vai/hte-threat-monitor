@@ -200,7 +200,7 @@ function renderFeed(): void {
         <span style="margin-left:auto">${fmtTime(e.publishedAt)}</span>
       </div>
       <div class="t">${escapeHtml(e.title)}</div>
-      <div class="s">${escapeHtml(e.summary.slice(0, 130))}</div>
+      <div class="s">${escapeHtml(String(e.summary ?? "").replace(/\[object Object\]/g, "").slice(0, 130))}</div>
       <div class="loc">
         ${e.country ? `<span class="loc-chip" data-country="${e.country}">📍 ${e.country}</span>` : ""}
         ${e.actor ? `<span class="actor-badge">🎭 ${escapeHtml(e.actor)}</span>` : ""}

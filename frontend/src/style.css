@@ -454,7 +454,7 @@ body {
 #st-crit { color: var(--crit); } #st-high { color: var(--high); }
 #st-med { color: var(--med); } #st-low { color: var(--low); }
 
-.feed-list { flex: 1 0 auto; padding: 0 10px 10px; list-style: none; }
+.feed-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 10px 10px; list-style: none; }
 .feed-list::-webkit-scrollbar { width: 6px; }
 .latest-articles { padding: 0 14px 8px; border-top: 1px solid var(--border); }
 .la-head { font-size: 0.66rem; color: var(--accent); letter-spacing: 1.5px; margin: 8px 0 6px; }

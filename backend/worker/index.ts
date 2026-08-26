@@ -6,45 +6,23 @@
  *   2. npx wrangler deploy   (first run registers a workers.dev subdomain)
  *
  * Notes:
- *   - Modules are imported dynamically on first fetch so we can install the
- *     process.env shim BEFORE config.ts loads (static imports are hoisted).
- *   - AI_ENGINE defaults to "none" on the edge (no local Ollama there); set
- *     OLLAMA_BASE_URL to a remote Ollama/Groq-compatible endpoint to enable AI.
+ *   - env-shim.ts MUST stay the first import: static imports hoist in order,
+ *     so it installs `process.env` before server.ts/config.ts evaluate.
+ *   - AI_ENGINE defaults to "none" on the edge (no local Ollama there).
  *   - Set secrets with: npx wrangler secret put <NAME>
  */
+import { installEdgeEnv, type WorkerEnv } from "./env-shim.js";
 import { getHandlers } from "../src/server.js";
 import { adsTxt, robotsTxt, privacyPage, aboutPage } from "../src/static-pages.js";
 
-export interface Env {
-  CORS_ORIGIN?: string;
-  AI_ENGINE?: string;
-  OLLAMA_BASE_URL?: string;
-  OLLAMA_MODEL?: string;
-  OTX_API_KEY?: string;
-  UPSTASH_REDIS_REST_URL?: string;
-  UPSTASH_REDIS_REST_TOKEN?: string;
-  NTFY_TOPIC?: string;
-  TELEGRAM_BOT_TOKEN?: string;
-  TELEGRAM_CHAT_ID?: string;
-  ADSENSE_PUB_ID?: string;
-}
+export interface Env extends WorkerEnv {}
 
 type Handler = (req: Request, env: { corsOrigin: string; cacheKind: string }, shell?: Response) => Promise<Response>;
 
-interface Handlers {
-  handleThreats: Handler;
-  handleRefresh: Handler;
-  handleHealth: Handler;
-  handleStats: Handler;
-  handleTrends: Handler;
-  handleSummary: Handler;
-  handleArticle: Handler;
-  handleSitemap: Handler;
-  handleArticlePage: Handler;
-}
-
 export default {
   async fetch(request: Request, e: Env): Promise<Response> {
+    installEdgeEnv(e); // idempotent; fills real secret values on first fetch
+
     const handlers = getHandlers();
     const corsOrigin = e.CORS_ORIGIN || "*";
     const cacheKind =
@@ -96,10 +74,9 @@ export default {
       return handlers.handleArticle(request, ctx);
     }
 
-    // crawlable article page: /article/<id> — serve SPA shell with SEO meta
+    // crawlable article page: /article/<slug-or-id> — serve SPA shell with SEO meta
     if (url.pathname.startsWith("/article/")) {
       const assets = (e as unknown as { ASSETS?: { fetch: (req: Request) => Promise<Response> } }).ASSETS;
-      // shell = the dashboard index.html; enrich with article meta for crawlers
       const shell = assets ? await assets.fetch(new Request(`${url.origin}/`, request)) : new Response("", { status: 404 });
       if (shell.ok) {
         return handlers.handleArticlePage(request, ctx, shell);
@@ -108,7 +85,6 @@ export default {
     }
 
     // Static dashboard assets (frontend/dist) served from the same origin.
-    // ASSETS binding is injected by wrangler via the `assets` config.
     const assets = (e as unknown as { ASSETS?: { fetch: (req: Request) => Promise<Response> } }).ASSETS;
     if (assets) {
       return assets.fetch(request);

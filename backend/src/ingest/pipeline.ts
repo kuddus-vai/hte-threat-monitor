@@ -124,6 +124,21 @@ async function doRefresh(): Promise<RefreshResult> {
   // 4) Sort newest-first, cap, and persist to cache
   events.sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1));
   const capped = events.slice(0, MAX_EVENTS);
+  // Guard: if every source failed but the cache still holds good data,
+  // do NOT overwrite it with an empty feed (transient edge network failures).
+  const existingFeed = await cache.get();
+  if (capped.length === 0 && sourcesOk.length === 0 && existingFeed && existingFeed.total > 0) {
+    return {
+      ok: false,
+      fetched: 0,
+      stored: 0,
+      aiProcessed: 0,
+      alerted: 0,
+      sourcesOk: [],
+      sourcesFailed: sourcesFailed,
+      error: "all sources failed; kept existing cached feed",
+    } as never;
+  }
   const feed: ThreatFeed = {
     updatedAt: new Date().toISOString(),
     sourceCount: sourcesOk.length,

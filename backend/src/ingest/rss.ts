@@ -153,15 +153,33 @@ export async function fetchRss(source: RssSource, limit = 20): Promise<RssItem[]
       : asArray(channel?.entry).length > 0
         ? asArray(channel?.entry)
         : asArray(doc?.feed?.entry);
+  return mapItems(rawItems, limit);
+}
 
+/** Atom feeds wrap content in objects ({#_text, @_type,…}) — pull the text out. */
+function textOf(v: any): string {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "object") {
+    // XMLParser shapes: {#text: "..."} or {_: "..."} or nested {div:…} — stringify leaves
+    const t = v["#text"] ?? v._ ?? v["#_text"];
+    if (typeof t === "string") return t;
+    return "";
+  }
+  return String(v);
+}
+
+function mapItems(rawItems: unknown[], limit: number) {
   return rawItems
     .map((it: any) => ({
-      title: stripHtml(String(it?.title ?? "")).trim(),
+      title: stripHtml(textOf(it?.title)).trim(),
       link: String(
         it?.link ?? (typeof it?.link === "object" ? it?.link?.["@_href"] : "") ?? "",
       ).trim(),
       pubDate: normalizeDate(it?.pubDate ?? it?.published ?? it?.updated),
-      description: stripHtml(String(it?.description ?? it?.summary ?? it?.content ?? "")),
+      description: stripHtml(
+        textOf(it?.description) || textOf(it?.summary) || textOf(it?.content),
+      ),
     }))
     .filter((i) => i.title && i.link)
     .slice(0, limit);
