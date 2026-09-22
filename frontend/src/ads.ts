@@ -34,11 +34,11 @@ export function renderSidebarAd(container: HTMLElement, category: string): void 
     container.innerHTML = `
       <div class="sponsored">Sponsored</div>
       <ins class="adsbygoogle"
-           style="display:block;min-height:250px"
+           style="display:block;width:100%;min-height:0"
            data-ad-client="${client}"
            data-ad-slot="1000000001"
            data-ad-format="vertical"
-           data-full-width-responsive="false"></ins>`;
+           data-full-width-responsive="true"></ins>`;
     setTimeout(() => {
       try {
         (window.adsbygoogle = window.adsbygoogle || []).push({});
@@ -63,7 +63,7 @@ export function renderAdSlot(container: HTMLElement, category: string): void {
     container.innerHTML = `
       <div class="sponsored">Advertisement</div>
       <ins class="adsbygoogle"
-           style="display:block;min-height:90px;max-width:728px;margin:0 auto"
+           style="display:block;width:100%;min-height:0;max-width:728px;margin:0 auto"
            data-ad-client="${client}"
            data-ad-slot="0000000000"
            data-ad-format="auto"

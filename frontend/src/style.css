@@ -563,7 +563,9 @@ body {
   margin: 18px 0; padding: 14px; text-align: center;
   background: rgba(255,255,255,0.03);
   border: 1px dashed rgba(255,255,255,0.1); border-radius: 10px;
+  max-width: 100%; overflow: hidden; /* ad iframes can't blow out layout */
 }
+.ad-slot ins.adsbygoogle { max-width: 100%; }
 .ad-slot .sponsored { font-size: 0.6rem; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
 .ad-slot .sponsor-link { font-size: 0.78rem; color: var(--accent); }
 .article-body { font-size: 0.92rem; line-height: 1.75; color: var(--text); }
@@ -589,7 +591,8 @@ body {
   display: flex; align-items: center; height: 44px;
   background: rgba(5, 7, 15, 0.92);
   border-top: 1px solid var(--border);
-  overflow: hidden;
+  overflow-x: auto; overflow-y: hidden; /* manual scroll allowed; CSS animation still runs */
+  scrollbar-width: thin;
 }
 .ticker-label {
   flex-shrink: 0; padding: 0 14px; height: 100%;  display: flex; align-items: center;
@@ -604,6 +607,10 @@ body {
   padding-right: 240px; /* keep news clear of the footer pill */
 }
 .ticker-track:hover { animation-play-state: paused; }
+/* accessibility: users who disable animations get a manually scrollable ticker */
+@media (prefers-reduced-motion: reduce) {
+  #ticker .ticker-track { animation: none; }
+}
 @keyframes scroll {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
