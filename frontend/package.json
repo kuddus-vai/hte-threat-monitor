@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && node -e \"require('fs').writeFileSync('dist/_headers', '/assets/*\\n  Cache-Control: public, max-age=31536000, immutable\\n\\n/index.html\\n  Cache-Control: public, max-age=0, must-revalidate\\n')\"",
+    "build": "tsc --noEmit && vite build && node -e \"require('fs').writeFileSync('dist/_headers', '/assets/*\\n  Cache-Control: public, max-age=31536000, immutable\\n\\n/index.html\\n  Cache-Control: public, max-age=0, must-revalidate\\n')\" && node -e \"const fs=require('fs');const p='dist/index.html';let h=fs.readFileSync(p,'utf8');const c=process.env.VITE_ADSENSE_CLIENT||'';const s=h.indexOf('<!--ADSENSE_START-->');const e=h.indexOf('<!--ADSENSE_END-->');if(s<0||e<0){console.log('AdSense loader: markers missing!');process.exit(1);}if(c){h=h.slice(0,e)+h.slice(e).replace('ADSENSE_CLIENT_PLACEHOLDER',c);console.log('AdSense loader: INJECTED ('+c+')');}else{h=h.slice(0,s)+h.slice(e+'<!--ADSENSE_END-->'.length);console.log('AdSense loader: stripped (no VITE_ADSENSE_CLIENT)');}fs.writeFileSync(p,h);\"",
     "preview": "vite preview"
   },
   "dependencies": {
